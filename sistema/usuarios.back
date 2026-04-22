@@ -1,0 +1,216 @@
+<?php
+if($ROUTE_OPC == 'DL_Permisos_ADV'){
+	$RETURN['items'] = array();
+	if($PP['A'] == 0 && $PP['M'] == 0){EJE($RETURN);}
+	if(CIJE('CES_ID_USUARIO') === TRUE){EJE($RETURN);};
+	if(CIJE('CTS_SISTEMA') === TRUE){EJE($RETURN);};
+	
+/* 	if($sJ['CTS_SISTEMA'] == 'EXP'){
+		$Que = QuerySelect("CALL ".$ZXS['O'].".`SP_ExpPermisosSectores`('".$sJ['CES_ID_USUARIO']."')");
+		while($Row = QueryFetch($Que)){
+			$RETURN['items'][$Row['sector']]['Nivel'] = $Row['nivel'];
+			$RETURN['items'][$Row['sector']]['Permisos']['C'] = ($Row['permiso'] != NULL && str_contains($Row['permiso'], 'C') ? 1 : 0);
+			if($Row['caratulacion'] != NULL){
+				$RETURN['items'][$Row['sector']]['Permisos']['A'] = ($Row['permiso'] != NULL && str_contains($Row['permiso'], 'A') ? 1 : 0);
+			}
+			$RETURN['items'][$Row['sector']]['Permisos']['M'] = ($Row['permiso'] != NULL && str_contains($Row['permiso'], 'M') ? 1 : 0);
+		}
+	} */
+	if($sJ['CTS_SISTEMA'] == 'TURNOS'){
+		// require_once './db_connect_portal.sys';
+		$Que = QuerySelect("SELECT `id_categoria`, `categoria`,'0' AS 'permiso' FROM ".$DBT['TURNERAS_PARAM_CATEGORIAS']." WHERE `disponible`='1' ORDER BY `categoria` ASC");
+		if(QueryNumRows($Que) > 0){
+			$PERMISO = array();
+			$QuePermisos = QuerySelect("SELECT `id_categoria`,`permiso` FROM ".$DBT['USERS_TURNERAS_PERMISOS']." WHERE `id_usuario`='".$sJ['CES_ID_USUARIO']."'");
+			if(QueryNumRows($QuePermisos) > 0){
+				while($RowPermisos = QueryFetch($QuePermisos)){
+					$PERMISO[$RowPermisos['id_categoria']]=$RowPermisos['permiso'];
+				}
+			}
+			while($Row = QueryFetch($Que)){
+				$RETURN['items'][$Row['categoria']]['Nivel'] = 1;
+				$RETURN['items'][$Row['categoria']]['Permisos']['C'] = (array_key_exists($Row['id_categoria'],$PERMISO) && str_contains($PERMISO[$Row['id_categoria']], 'C') ? 1 : 0);
+				$RETURN['items'][$Row['categoria']]['Permisos']['A'] = (array_key_exists($Row['id_categoria'],$PERMISO) && str_contains($PERMISO[$Row['id_categoria']], 'A') ? 1 : 0);
+				$RETURN['items'][$Row['categoria']]['Permisos']['B'] = (array_key_exists($Row['id_categoria'],$PERMISO) && str_contains($PERMISO[$Row['id_categoria']], 'B') ? 1 : 0);
+				$RETURN['items'][$Row['categoria']]['Permisos']['M'] = (array_key_exists($Row['id_categoria'],$PERMISO) && str_contains($PERMISO[$Row['id_categoria']], 'M') ? 1 : 0);
+				$RETURN['items'][$Row['categoria']]['Permisos']['E'] = (array_key_exists($Row['id_categoria'],$PERMISO) && str_contains($PERMISO[$Row['id_categoria']], 'E') ? 1 : 0);
+			}
+		}
+	}
+	
+	EJE($RETURN);
+}
+elseif($ROUTE_OPC == 'Listado_Usuarios'){ // ya me muestra los usuarios
+	$RETURN['COUNT'] = 0;
+	$RETURN['TOTAL'] = 0;
+	$RETURN['PAGINAS'] = 1;
+	$RETURN['ROWS'] = [];
+	
+	if($PP['C'] != 1){EJE($RETURN);}
+	$ARRAY_ORDER = array(1 => '`usuario` {METHOD}', 2 => '`apellido` {METHOD}, `nombre` {METHOD}', 3 => '`cuil` {METHOD}', 4 => '`login_date` {METHOD}');
+	$FORM = LISTADO_QUERY($ARRAY_ORDER);
+	if($FORM['SEARCH'] != NULL){ $SEARCH = "WHERE U.`disponible` = '1' AND (U.`usuario` = '".$FORM['SEARCH']."' OR U.`dni` = '".$FORM['SEARCH']."')";}else{$SEARCH = "WHERE U.`disponible` = '1'";}
+	$Que = QuerySelect("SELECT U.`id_usuario`, U.`usuario`, U.`dni`, U.`login_date`, M.`correo` FROM ".$DBT['USERS']." U LEFT JOIN ".$DBT['USERS_MAIL']." M ON U.`id_usuario` = M.`id_usuario` ".$SEARCH." ORDER BY ".$FORM['ORDENAR']." LIMIT ".$FORM['LIMIT']." ,".$FORM['ROWS']);
+	while($Row = QueryFetch($Que)){
+		$RETURN['COUNT']++;
+		$TMP = [];
+		$TMP['ID'] 						= $Row['id_usuario'];
+		$TMP['DATA']['USUARIO'] 		= $Row['usuario'];
+		$TMP['DATA']['MAIL'] 			= $Row['correo'];
+		$TMP['DATA']['DNI'] 			= $Row['dni'];
+		$TMP['DATA']['LOGIN_DATE']		= Fecha_Formato($Row['login_date'],"d-m-Y H:i:s");
+		array_push($RETURN['ROWS'], $TMP);
+		unset($TMP);
+	}
+	$Que = QuerySelect("SELECT COUNT(*) AS 'total' FROM ".$DBT['USERS']." U ".$SEARCH);
+	while($Row = QueryFetch($Que)){	
+		$RETURN['TOTAL'] = $Row['total'];
+		$RETURN['PAGINAS'] = ceil($RETURN['TOTAL']/$FORM['ROWS']);
+	}
+	EJE($RETURN);
+}
+elseif($ROUTE_OPC == 'Listado_Usuarios_Bloqueados'){
+	$RETURN['COUNT'] = 0;
+	$RETURN['TOTAL'] = 0;
+	$RETURN['PAGINAS'] = 1;
+	$RETURN['ROWS'] = [];
+	if($PP['C'] != 1){EJE($RETURN);}
+	$ARRAY_ORDER = array(1 => '`usuario` {METHOD}', 2 => '`apellido` {METHOD}, `nombre` {METHOD}', 3 => '`cuil` {METHOD}', 4 => '`login_date` {METHOD}');
+	$FORM = LISTADO_QUERY($ARRAY_ORDER);
+	if($FORM['SEARCH'] != NULL){ $SEARCH = "WHERE `disponible` = '0' AND (`usuario` = '".$FORM['SEARCH']."' OR `cuil` = '".$FORM['SEARCH']."')";}else{$SEARCH = "WHERE `disponible` = '0'";}
+	$Que = QuerySelect("SELECT `id_usuario`, `usuario`, `nombre`, `apellido`, `cuil`, `login_date` FROM ".$DBT['USERS'].$SEARCH." ORDER BY ".$FORM['ORDENAR']." LIMIT ".$FORM['LIMIT']." ,".$FORM['ROWS']);
+	while($Row = QueryFetch($Que)){
+		$RETURN['COUNT']++;
+		$TMP = [];
+		$TMP['ID'] 						= $Row['id_usuario'];
+		$TMP['DATA']['USUARIO'] 		= $Row['usuario'];
+		$TMP['DATA']['NOMBRE'] 			= $Row['apellido'].', '.$Row['nombre'];
+		$TMP['DATA']['CUIL'] 		= $Row['cuil'];
+		$TMP['DATA']['LOGIN_DATE']		= Fecha_Formato($Row['login_date'],"d-m-Y H:i:s");
+		array_push($RETURN['ROWS'], $TMP);
+		unset($TMP);
+	}
+	$Que = QuerySelect("SELECT COUNT(*) AS 'total' FROM ".$DBT['USERS'].$SEARCH);
+	while($Row = QueryFetch($Que)){	
+		$RETURN['TOTAL'] = $Row['total'];
+		$RETURN['PAGINAS'] = ceil($RETURN['TOTAL']/$FORM['ROWS']);
+	}
+	EJE($RETURN);
+}
+elseif($ROUTE_OPC == 'Procesar_Usuario'){ //ya hice crear y editar un usuario
+	if($PP['A'] == 0 && $PP['M'] == 0){RJRE();}
+	if(CIJE('CEI_ID_USUARIO') === TRUE){RJRE();};
+	if(CIJE('CTS_USUARIO') === TRUE){RJRE();};
+	if(CIJE('CEI_DNI') === TRUE){RJRE();};
+	// if(CIJE('CTS_NOMBRE') === TRUE){RJRE();};
+	// if(CIJE('CTS_APELLIDO') === TRUE){RJRE();};
+	// if(CIJE('CPC_CUIL') === TRUE){RJRE();};
+	if($sJ['CEI_ID_USUARIO'] == 0 && $PP['A'] != 1){RJRE("PERMISOS INSUFICIENTES");}
+	if($sJ['CEI_ID_USUARIO'] != 0 && $PP['M'] != 1){RJRE("PERMISOS INSUFICIENTES");}
+	$Que = QuerySelect("SELECT `id_usuario` FROM ".$DBT['USERS']." WHERE `usuario` = '".$sJ['CTS_USUARIO']."'");
+	if(QueryNumRows($Que) > 0){while($Row = QueryFetch($Que)){if($Row['id_usuario'] != $sJ['CEI_ID_USUARIO']){RJRE('El usuario ya se encuentra registrado');}}}
+
+	$Que = QuerySelect("SELECT `id_usuario` FROM ".$DBT['USERS']." WHERE `dni` = '".$sJ['CEI_DNI']."'");
+	if(QueryNumRows($Que) > 0){while($Row = QueryFetch($Que)){if($Row['id_usuario'] != $sJ['CEI_ID_USUARIO']){RJRE('El DNI ya se encuentra registrado');}}}
+	
+	if($sJ['CEI_ID_USUARIO'] == 0){
+		$Que = QueryInsert("INSERT INTO ".$DBT['USERS']."(`usuario`, `dni`) VALUES ('".$sJ['CTS_USUARIO']."','".$sJ['CEI_DNI']."')");
+	}else{
+		$Que = QuerySelect("SELECT `id_usuario`,`usuario`, `dni` FROM ".$DBT['USERS']." WHERE `id_usuario` = '".$sJ['CEI_ID_USUARIO']."'");
+		if(QueryNumRows($Que) < 1){RJRE();}
+		while($Row = QueryFetch($Que)){
+			if($Row['usuario'] != $sJ['CTS_USUARIO']){QueryUpdate("UPDATE ".$DBT['USERS']." SET `usuario` = '".$sJ['CTS_USUARIO']."' WHERE `id_usuario` = '".$sJ['CEI_ID_USUARIO']."'");}
+			// if($Row['nombre'] != $sJ['CTS_NOMBRE']){QueryUpdate("UPDATE ".$DBT['USERS']." SET `nombre` = '".$sJ['CTS_NOMBRE']."' WHERE `id_usuario` = '".$sJ['CEI_ID_USUARIO']."'");}
+			// if($Row['apellido'] != $sJ['CTS_APELLIDO']){QueryUpdate("UPDATE ".$DBT['USERS']." SET `apellido` = '".$sJ['CTS_APELLIDO']."' WHERE `id_usuario` = '".$sJ['CEI_ID_USUARIO']."'");}
+			if($Row['dni'] != $sJ['CEI_DNI']){QueryUpdate("UPDATE ".$DBT['USERS']." SET `dni` = '".$sJ['CEI_DNI']."' WHERE `id_usuario` = '".$sJ['CEI_ID_USUARIO']."'");}
+		}
+	}
+	RJRO();
+}
+elseif($ROUTE_OPC == 'Procesar_Usuario_Permisos'){
+	if($PP['A'] == 0 && $PP['M'] == 0){RJRE();}
+	if(CIJE('CEI_ID_USUARIO') === TRUE){$sJ['CEI_ID_USUARIO'] = 0;};
+	$Que = QuerySelect("SELECT `id_usuario` FROM ".$DBT['USERS']." WHERE `id_usuario` = '".$sJ['CEI_ID_USUARIO']."' AND `disponible` = '1'");
+	if(QueryNumRows($Que)< 1){RJRE();}
+	
+	function AddPadre($ROUTE){
+		global $TMP_PERMISOS,$ROUTES_SYS;
+		if(array_key_exists($ROUTE,$ROUTES_SYS)){
+			$TMP_PERMISOS[$ROUTE] = "C";
+			if($ROUTES_SYS[$ROUTE]['Padre'] != "Inicio"){AddPadre($ROUTES_SYS[$ROUTE]['Padre']);}
+		}
+	}
+	$TMP_PERMISOS = array();
+	foreach($ROUTES_SYS as $KEY_ROUTE => $VALUE_ROUTE){
+		if(array_key_exists('menu',$VALUE_ROUTE) && array_key_exists('Permisos',$VALUE_ROUTE)){
+			foreach($VALUE_ROUTE['Permisos'] as $KEY_PERMISO){
+				if(CIJE('CIB_'.$KEY_ROUTE.'_'.$KEY_PERMISO) === FALSE && $sJ['CIB_'.$KEY_ROUTE.'_'.$KEY_PERMISO] == '1'){
+					if(!in_array($KEY_PERMISO,$VALUE_ROUTE['PermisosDefault'])){
+						if(!array_key_exists($KEY_ROUTE,$TMP_PERMISOS)){$TMP_PERMISOS[$KEY_ROUTE] = $KEY_PERMISO;}else{$TMP_PERMISOS[$KEY_ROUTE] .= $KEY_PERMISO;}
+						if($VALUE_ROUTE['Padre'] != "Inicio"){AddPadre($VALUE_ROUTE['Padre']);}
+					}
+				}
+			}
+		}
+	}
+	QueryDelete("DELETE FROM  ".$DBT['USERS_PERMISOS']." WHERE `id_usuario` = '".$sJ['CEI_ID_USUARIO']."'");
+	foreach($TMP_PERMISOS as $KEY => $VALUE){
+		QueryInsert("INSERT INTO ".$DBT['USERS_PERMISOS']."(`id_usuario`, `route`, `permiso`) VALUES ('".$sJ['CEI_ID_USUARIO']."','".$KEY."','".$VALUE."')");
+	}
+	RJRO();
+}
+elseif($ROUTE_OPC == 'Procesar_Usuario_Status'){
+	if($PP['B'] == 0){RJRE();}
+	if(CIJE('CEI_ID') === TRUE){RJRE();};
+	if(CIJE('CtS_STATUS') === TRUE){RJRE();};
+	if($sJ['CtS_STATUS'] != 'Lock' && $sJ['CtS_STATUS'] != 'Unlock'){RJRE();}
+
+
+	$FORM['STATUS'] = 1;
+	if($sJ['CtS_STATUS'] == 'Lock'){
+		$FORM['STATUS'] = 0;
+	}
+	
+	$Que = QuerySelect("SELECT `id_usuario`,`usuario`,`disponible` FROM ".$DBT['USERS']." WHERE `id_usuario` = '".$sJ['CEI_ID']."'");
+	if(QueryNumRows($Que) < 1){RJRE();}
+	while($Row = QueryFetch($Que)){
+		if($Row['disponible'] == 1 && $FORM['STATUS'] == 0){
+			$Que = QueryUpdate("UPDATE ".$DBT['USERS']." SET `disponible` = '".$FORM['STATUS']."' WHERE `id_usuario` = '".$sJ['CEI_ID']."'");
+		}
+		if($Row['disponible'] == 0 && $FORM['STATUS'] == 1){
+			$Que = QueryUpdate("UPDATE ".$DBT['USERS']." SET `disponible` = '".$FORM['STATUS']."' WHERE `id_usuario` = '".$sJ['CEI_ID']."'");
+		}
+	}
+	RJRO();
+}
+elseif($ROUTE_OPC == 'Ver_Usuario'){
+	$RETURN['ID_USUARIO'] = 0;
+	if($PP['C'] != 1){EJE($RETURN);}
+	if(CIJE('CEI_ID') === TRUE){$sJ['CEI_ID'] = 0;};
+	$Que = QuerySelect("SELECT `id_usuario`, `usuario`, `dni`, `disponible` FROM ".$DBT['USERS']." WHERE `id_usuario` = '".$sJ['CEI_ID']."'");	
+	while($Row = QueryFetch($Que)){
+		$RETURN['ID_USUARIO'] 	= $Row['id_usuario'];
+		$RETURN['USUARIO'] 		= $Row['usuario'];
+		$RETURN['DNI'] 		= $Row['dni'];
+		$RETURN['DISPONIBLE'] 	= $Row['disponible'];
+	}
+	EJE($RETURN);
+}
+elseif($ROUTE_OPC == 'Ver_Usuario_Permisos'){
+	if($PP['A'] == 0 && $PP['M'] == 0){RJRE();}
+	if(CIJE('CEI_ID') === TRUE){$sJ['CEI_ID'] = 0;};
+	$Que = QuerySelect("SELECT `route`,`permiso` FROM ".$DBT['USERS_PERMISOS']." WHERE `id_usuario` = '".$sJ['CEI_ID']."'");
+	$RETURN['PERMISOS'] = array();
+	while($Row = QueryFetch($Que)){
+		if(array_key_exists($Row['route'], $ROUTES_SYS) && array_key_exists('Permisos',$ROUTES_SYS[$Row['route']])){
+			foreach(str_split($Row['permiso']) as $K){
+				array_push($RETURN['PERMISOS'],$Row['route'].'_'.$K);
+			}
+		}
+	}
+	EJE($RETURN);
+}
+else{
+	EE("NO_SE_PUEDE_PROCESAR_LA_SOLICITUD");
+}
+?>
