@@ -1,0 +1,347 @@
+<?php /* LINEA 260 y 261 -> FormErrorReset("TURNOS_FORM") y FormReset("TURNOS_FORM") -> tiene que apuntar a TURNO_BORRAR_FORM*/
+$FILE_JS = 'default_v3';
+
+
+$MAIN = '<div class="card border-dark mx-auto" style="max-width: 910px">';
+	$MAIN .= '<div class="card-header card-main  gradient_card rounded-2 text-light" id="card-main" style="--bs-bg-opacity: .95;">';
+		$MAIN .= '<div class="d-grid gap-2 d-flex justify-content-center">';
+			$MAIN .= '<ul class="nav nav-pills tabs-buttons">';					
+				$MAIN .= '<li class="nav-item">';
+					$MAIN .= '<button class="nav-link text-light mx-1 active" type="button" role="tab" aria-controls="Calendario" aria-selected="true">';
+						$MAIN .= '<div class="d-inline-flex"><i class="fa-regular fa-calendar-days"></i></div>';
+						$MAIN .= '<div class="d-inline-block"><span class="d-none d-md-block text-center card_header_btn">Calendario</span></div>';									
+					$MAIN .= '</button>';
+				$MAIN .= '</li>';
+			$MAIN .= '</ul>';
+		$MAIN .= '</div>';
+	$MAIN .= '</div>';
+	$MAIN .= '<div class="card text-center border border-0">';
+		$MAIN .= '<div class="card-body mt-3 mb-4 px-4 py-2">';
+			$MAIN .= '<div class="tab-content tabs-body">';
+				$MAIN .= '<form id="CALENDARIO_FORM" autocomplete="off">';
+					$MAIN .= CreateFormInput(array('ID' => 'periodo', 'TIPO' => 'hidden', 'VALIDATE' => 'CFA', 'VALUE' => date("Y-m-")."01"));
+					$MAIN .= CreateFormInput(array('ID' => 'id_categoria', 'TIPO' => 'hidden', 'VALIDATE' => 'CET'));
+					$MAIN .= CreateFormInput(array('ID' => 'fecha', 'TIPO' => 'hidden', 'VALIDATE' => 'CFA'));
+					$MAIN .= CreateFormInput(array('ID' => 'profesional', 'TIPO' => 'select2', 'VALIDATE' => 'CTS', 'REQUIRED' => TRUE, 'LABEL' => 'Agenda'));		
+				$MAIN .= '</form>';
+			$MAIN .= '</div>';
+			$MAIN .= '<div class="row align-items-center mb-1">';
+				$MAIN .= '<div class="btn-group btn-group-lg">';
+					$MAIN .= '<a href="#" class="btn btn-lg btn-secondary" onClick="Procesar_Periodo(\'less\')"><i class="fa-regular fa-circle-left"></i></a>';
+					$MAIN .= '<a href="#" class="btn btn-lg btn-secondary active" aria-current="page" id="DISPLAY_PERIODO" disabled></a>';
+					$MAIN .= '<a href="#" class="btn btn-lg btn-secondary" onClick="Procesar_Periodo(\'add\')"><i class="fa-regular fa-circle-right"></i></a>';
+				$MAIN .= '</div>';
+			$MAIN .= '</div>';
+			$MAIN .= '<table class="table table-bordered table-lg text-center">';
+				$MAIN .= '<thead class="gradient_table">';
+					$MAIN .= '<tr>';
+						$MAIN .= '<th>Lun</th>';
+						$MAIN .= '<th>Mar</th>';
+						$MAIN .= '<th>Mié</th>';
+						$MAIN .= '<th>Jue</th>';
+						$MAIN .= '<th>Vie</th>';
+					$MAIN .= '</tr>';
+				$MAIN .= '</thead>';
+				$MAIN .= '<tbody id="TurneraCalendarBody"></tbody>';
+			$MAIN .= '</table>';
+		$MAIN .= '</div>';
+	$MAIN .= '</div>';
+$MAIN .= '</div>';
+
+
+unset($TMP);
+$TMP['MODAL']['ID']			= 'TURNOS';
+$TMP['MODAL']['TITLE']		= 'Ver Turnos';
+$TMP['MODAL']['SIZE']		= 'XL';
+
+$TMP['FOOTER']['CLOSE']		= array('ID' => 'Cerrar');
+
+$TMP['BODY'] = '<div class="card border-dark mx-auto mt-4 mb-0" style="width: 98%">';
+	$TMP['BODY'] .= '<div class="card-header card-main  gradient_card rounded-2 text-light" id="subcard-main" style="--bs-bg-opacity: .95;">';
+		$TMP['BODY'] .= '<div class="d-grid gap-2 d-flex justify-content-center">';
+			$TMP['BODY'] .= '<ul class="nav nav-pills subtabs-buttons">';					
+				$TMP['BODY'] .= '<li class="nav-item nav-Ficha">';
+					$TMP['BODY'] .= '<button class="nav-link text-light mx-1" type="button" role="tab" aria-controls="FICHA" aria-selected="false">';
+						$TMP['BODY'] .= '<i class="fa-solid fa-calendar-days fa-lg"></i> <div class="d-inline-block"><span class="d-none d-xl-block text-center subcardcard_header_btn">Ficha</span></div>';									
+					$TMP['BODY'] .= '</button>';
+				$TMP['BODY'] .= '</li>';
+			$TMP['BODY'] .= '</ul>';
+		$TMP['BODY'] .= '</div>';
+	$TMP['BODY'] .= '</div>';
+	$TMP['BODY'] .= '<div class="card text-center border border-0">';
+		$TMP['BODY'] .= '<div class="card-body px-4 py-2 overflow-auto" id="subcardcard-body-main"> ';
+			$TMP['BODY'] .= '<div class="tab-content subtabs-body">';			
+				$TMP['BODY'] .= '<div class="tab-pane fade" role="tabpanel" aria-labelledby="FICHA" tabindex="1">';
+					$SUBTABLE_FICHA['COLUMNAS']			= array(
+						array('COLUMNA' => 'Tipo'),
+						array('COLUMNA' => 'Afiliacion'),
+						array('COLUMNA' => 'Afiliado'),
+						array('COLUMNA' => 'DNI'),
+						array('COLUMNA' => 'Telefono'),
+						array('COLUMNA' => 'Correo'),
+						array('COLUMNA' => 'Hora'),
+						array('COLUMNA' => 'Turno'),
+						array('COLUMNA' => 'persona', 'DISPLAY' => 'NONE')
+					);
+					$SUBTABLE_FICHA['AJAX_URL'] 		= $LINK_BACK.'/Listado_TurnosFecha';
+					$SUBTABLE_FICHA['HERRAMIENTAS_NEW'] 	= array(
+						array('TITLE' => 'RECEPCION', 'ICON' => '<i class="fa-solid fa-list-check fa-lg"></i>', 'FN' => 'Display_Recepcion', 'CLICK' => 'Display_Recepcion()', 'PERMISOS' => 'M', 'ROW_SELECTED' => TRUE),
+						array('TITLE' => 'ANULAR', 'ICON' => '<i class="fa-solid fa-trash-can fa-lg"></i>', 'FN' => 'Display_Turnos_Borrar', 'CLICK' => 'Display_Turnos_Borrar()', 'PERMISOS' => 'B', 'ROW_SELECTED' => TRUE),
+						array('TITLE' => 'IMPRIMIR', 'ICON' => '<i class="fa-solid fa-print fa-lg"></i>', 'FN' => NULL, 'CLICK' => 'TablePrint(\'FICHA\', true)', 'PERMISOS' => 'C', 'ROW_SELECTED' => FALSE),
+						array('TITLE' => 'DESCARGAR', 'ICON' => '<i class="fa-regular fa-file-pdf fa-lg"></i>', 'FN' => 'Display_Descarga','CLICK' => 'Display_Descarga()',	'PERMISOS' => 'C', 'ROW_SELECTED' => FALSE),
+						array('TITLE' => 'ACTUALIZAR', 'ICON' => '<i class="fa-solid fa-rotate fa-lg"></i>', 'FN' => NULL, 'CLICK' => 'TableRefresh(\'FICHA\')', 'PERMISOS' => 'C', 'ROW_SELECTED' => FALSE),
+						array('TITLE' => 'VER TODO', 'ICON' => '<i class="fa-solid fa-eye fa-lg ToolShowHide"></i>', 'FN' => 'Display_Hide', 'CLICK' => 'Display_Hide()', 'PERMISOS' => 'C', 'ROW_SELECTED' => FALSE),
+					); 
+					$SUBTABLE_FICHA['SETTING'] 			= array('ORDENAR' => "FALSE", 'DOBLE_CLICK' => 'Display_Recepcion', 'ADV_JSON' => TRUE);
+					$TMP['BODY'] .= CreateMainTable('FICHA','Ficha', $SUBTABLE_FICHA, TRUE);
+				$TMP['BODY'] .= '</div>';
+			$TMP['BODY'] .= '</div>';
+		$TMP['BODY'] .= '</div>';
+	$TMP['BODY'] .= '</div>';
+$TMP['BODY'] .= '</div>';
+
+array_push($MODALS,CreateModal($TMP['MODAL'], $TMP['BODY'], $TMP['FOOTER']));
+array_push($VARS,"const MODAL_".$TMP['MODAL']['ID']."_INSTANCE = bootstrap.Modal.getOrCreateInstance('#MODAL_".$TMP['MODAL']['ID']."');");
+array_push($VARS,"const MODAL_".$TMP['MODAL']['ID']." = document.getElementById('MODAL_".$TMP['MODAL']['ID']."');");	
+unset($JS_TMP);
+
+$JS_TMP = 'async function Display_Ver_Fecha(){';
+	$JS_TMP .= '$("#Table_FICHA_advanced").val(JSON.stringify({CET_ID_CATEGORIA: $("#CALENDARIO_FORM #ID_CATEGORIA").val(), CTS_PROFESIONAL: $("#CALENDARIO_FORM #PROFESIONAL").val(), CFA_FECHA: $("#CALENDARIO_FORM #FECHA").val()}));';
+	$JS_TMP .= 'TableLoad("FICHA");';
+	$JS_TMP .= 'MODAL_TURNOS_INSTANCE.show();';
+$JS_TMP .= '}';
+array_push($FUNCTIONS,$JS_TMP);
+
+$JS_TMP = 'async function Procesar_Periodo(method){';
+	$JS_TMP .= 'let [year, month, day] = $("#CALENDARIO_FORM #PERIODO").val().split("-").map(Number);';
+	$JS_TMP .= 'if(method == "add"){month += 1;}';
+	$JS_TMP .= 'if(method == "less"){month -= 1;}';
+	$JS_TMP .= 'if (month > 12) {';
+		$JS_TMP .= 'year += 1;';
+		$JS_TMP .= 'month = 1;';
+	$JS_TMP .= '} else if (month < 1) {';
+		$JS_TMP .= 'year -= 1;';
+		$JS_TMP .= 'month = 12;';
+	$JS_TMP .= '}';
+	$JS_TMP .= '$("#CALENDARIO_FORM #PERIODO").val(year.toString().padStart(4, "0")+"-"+month.toString().padStart(2, "0")+"-01");';
+	$JS_TMP .= 'Procesar_A_Ver();';
+$JS_TMP .= '}';
+
+$JS_TMP .= 'async function Procesar_A_Ver(){';
+	$JS_TMP .= 'const responseAgenda = await $.ajax({ url: "'.$LINK_BACK.'/Ver_Agenda/", data: JSON.stringify({"CEI_ID_AGENDA":$("#CALENDARIO_FORM #PROFESIONAL").val()})});';
+	$JS_TMP .= '$("#CALENDARIO_FORM #ID_CATEGORIA").val(responseAgenda.ID_CATEGORIA);';
+	$JS_TMP .= '$("#TITLE_TURNOS").html(responseAgenda.TITLE);';
+	$JS_TMP .= 'const response = await $.ajax({ url: "'.$LINK_BACK.'/Ver_Calendario/", data: JSON.stringify( await FormDataPicker("CALENDARIO_FORM"))});';
+	$JS_TMP .= '$("#DISPLAY_PERIODO").text(response.DISPLAY_PERIODO);';
+	
+	$JS_TMP .= '$("#TurneraCalendarBody").empty();';
+	$JS_TMP .= '$.each(response.CALENDARIO, function(fila, dias) {';
+		$JS_TMP .= 'let row = $("<tr></tr>");';
+		$JS_TMP .= 'let maxDias = 5;';
+		$JS_TMP .= 'let addedCells = 0;';
+		$JS_TMP .= 'let primerDiaSemana = Math.min(...Object.keys(dias).map(Number));';
+		$JS_TMP .= 'for (let i = 1; i < primerDiaSemana; i++) {';
+			$JS_TMP .= 'row.append("<td></td>");';
+			$JS_TMP .= 'addedCells++;';
+		$JS_TMP .= '}';
+		$JS_TMP .= '$.each(dias, function(dia, data) {';
+			$JS_TMP .= 'let cell = $("<td></td>").text(data.FECHA);';
+			$JS_TMP .= 'if (data.COLOR) {';
+				$JS_TMP .= 'cell.css("background-color", data.COLOR);';
+			$JS_TMP .= '}';
+			$JS_TMP .= 'if (data.TITLE) {';
+				$JS_TMP .= 'cell.attr("title", data.TITLE.replace(/&#10;/g, "\\n"));';
+			$JS_TMP .= '}';
+			$JS_TMP .= 'if (data.CLICK != "") {';
+				$JS_TMP .= 'cell.attr("data-click", data.CLICK);';
+			$JS_TMP .= '}';
+			$JS_TMP .= 'cell.attr("data-date", data.FECHA);';
+			$JS_TMP .= 'row.append(cell);';
+			$JS_TMP .= 'addedCells++;';
+		$JS_TMP .= '});';
+		$JS_TMP .= 'while (addedCells < maxDias) {';
+			$JS_TMP .= 'row.append("<td></td>");';
+			$JS_TMP .= 'addedCells++;';
+		$JS_TMP .= '}';
+		$JS_TMP .= '$("#TurneraCalendarBody").append(row);';
+	$JS_TMP .= '});';
+	$JS_TMP .= '';		
+$JS_TMP .= '}';
+
+$JS_TMP .= '$(document).off("change","#CALENDARIO_FORM #PROFESIONAL").on("change", "#CALENDARIO_FORM #PROFESIONAL", async function(){';
+	$JS_TMP .= 'Procesar_A_Ver();';
+$JS_TMP .= '});';
+
+$JS_TMP .= '$(document).off("click","#TurneraCalendarBody td").on("click", "#TurneraCalendarBody td", async function(){';
+	$JS_TMP .= 'let dateValue = $(this).attr("data-click");';
+	$JS_TMP .= 'if (dateValue != undefined) {';
+		$JS_TMP .= '$("#CALENDARIO_FORM #FECHA").val(dateValue);';
+		$JS_TMP .= 'let fecha = $("#CALENDARIO_FORM #FECHA").val().split("-");';
+		$JS_TMP .= '$("#MODAL_TURNOS .nav-Ficha .subcardcard_header_btn").html(fecha[2]+"/"+fecha[1]);';
+		$JS_TMP .= 'Display_Ver_Fecha();';
+	$JS_TMP .= '}';
+$JS_TMP .= '});';
+array_push($FUNCTIONS,$JS_TMP);
+
+if(in_array('Display_Recepcion', $TABLE_FUNCTION)){
+	unset($TMP);
+	$TMP['MODAL']['ID']			= 'RECEPCION';
+	$TMP['MODAL']['TITLE']		= 'Recepcionar';
+	$TMP['MODAL']['SIZE']		= '';
+	
+	$TMP['FOOTER']['SUBMIT'] 	= array('ID' => 'Guardar');
+	$TMP['FOOTER']['CLOSE']		= array('ID' => 'Cerrar');
+	
+	$TMP['BODY'] = '<input type="hidden" id="AUTOFOCUS">';
+	$TMP['BODY'] .= '<form id="'.$TMP['MODAL']['ID'].'_FORM" autocomplete="off">';		
+		$TMP['BODY'] .= CreateFormInput(array('ID' => 'id_turno', 'TIPO' => 'hidden', 'VALIDATE' => 'CEI', 'VALUE' => 0));
+		$TMP['BODY'] .= '<div class="btn-group btn-group-sm mb-3 w-100" role="group">';
+			$TMP['BODY'] .= '<input type="radio" class="btn-check" name="ESTADO" id="1" value="1" VALIDATE="CET" autocomplete="off"><label class="btn btn-outline-primary" for="1">Reservado</label>';
+			$TMP['BODY'] .= '<input type="radio" class="btn-check" name="ESTADO" id="10" VALIDATE="CET" value="10" autocomplete="off"><label class="btn btn-outline-primary" for="10">Ausente</label>';
+			$TMP['BODY'] .= '<input type="radio" class="btn-check" name="ESTADO" id="11" VALIDATE="CET" value="11" autocomplete="off"><label class="btn btn-outline-primary" for="11">Presente</label>';
+		$TMP['BODY'] .= '</div>';
+		$TMP['BODY'] .= CreateFormInput(array('ID' => 'motivo', 'TIPO' => 'textarea', 'VALIDATE' => 'CTS'));		
+	$TMP['BODY'] .= '</form>';
+	array_push($MODALS,CreateModal($TMP['MODAL'], $TMP['BODY'], $TMP['FOOTER']));
+	array_push($VARS,"const MODAL_".$TMP['MODAL']['ID']."_INSTANCE = bootstrap.Modal.getOrCreateInstance('#MODAL_".$TMP['MODAL']['ID']."');");
+	array_push($VARS,"const MODAL_".$TMP['MODAL']['ID']." = document.getElementById('MODAL_".$TMP['MODAL']['ID']."');");	
+	unset($JS_TMP);
+	
+	$JS_TMP = 'async function Display_Recepcion(){';
+		$JS_TMP .= 'const response = await $.ajax({url: "'.$LINK_BACK.'/Ver_Turno_Status/",data: JSON.stringify({CEI_ID_TURNO: $("#Table_FICHA_row").val()})});';
+		$JS_TMP .= 'if(response.ID_TURNO != $("#Table_FICHA_row").val() || response.ESTADO == 0){ return;}';
+		$JS_TMP .= '$("#RECEPCION_FORM #ID_TURNO").val(response.ID_TURNO);';
+		$JS_TMP .= '$("#RECEPCION_FORM #"+response.ESTADO).prop("checked",true);';
+		$JS_TMP .= '$("#RECEPCION_FORM #MOTIVO").val(response.MOTIVO);';
+		$JS_TMP .= 'MODAL_RECEPCION_INSTANCE.show();';		
+	$JS_TMP .= '}';	
+
+	$JS_TMP .= 'async function MODAL_RECEPCION_Procesar(){';
+		$JS_TMP .= 'if($("#RECEPCION_FORM")[0].reportValidity()==false){return;}';
+		$JS_TMP .= 'FormErrorReset("RECEPCION_FORM");';
+		$JS_TMP .= 'const response = await $.ajax({url: "'.$LINK_BACK.'/Procesar_Turno_Estado/",data: JSON.stringify(await FormDataPicker("RECEPCION_FORM"))});';
+		$JS_TMP .= 'if(response.RESULTADO == "OK"){';
+			$JS_TMP .= 'TableLoad("FICHA");';
+			$JS_TMP .= 'MODAL_RECEPCION_INSTANCE.hide();';
+			$JS_TMP .= SF('OK');
+		$JS_TMP .= '}else{';
+			$JS_TMP .= 'if(response.MESSAGE != ""){'.SF('MSG', 'response.MESSAGE').'}';
+			$JS_TMP .= 'else{'.SF('ERROR').'}';
+		$JS_TMP .= '}';
+	$JS_TMP .= '}';		
+	array_push($FUNCTIONS,$JS_TMP);
+}
+
+if(in_array('Display_Turnos_Borrar', $TABLE_FUNCTION)){
+	unset($TMP);
+	$TMP['MODAL']['ID']			= 'TURNO_BORRAR';
+	$TMP['MODAL']['TITLE']		= 'Anular';
+	$TMP['MODAL']['SIZE']		= '';
+	
+	$TMP['FOOTER']['SUBMIT'] 	= array('ID' => 'Anular');
+	$TMP['FOOTER']['CLOSE']		= array('ID' => 'Cerrar');
+	
+	$TMP['BODY'] = '<input type="hidden" id="AUTOFOCUS">';
+	$TMP['BODY'] .= '<form id="'.$TMP['MODAL']['ID'].'_FORM" autocomplete="off">';		
+		$TMP['BODY'] .= '<div class="alert alert-danger text-center" role="alert"></div>';
+		$TMP['BODY'] .= CreateFormInput(array('ID' => 'id_turno', 'TIPO' => 'hidden', 'VALIDATE' => 'CEI', 'VALUE' => 0));
+		$TMP['BODY'] .= CreateFormInput(array('ID' => 'id_persona', 'TIPO' => 'hidden', 'VALIDATE' => 'CEI', 'VALUE' => 0));
+		$TMP['BODY'] .= CreateFormInput(array('ID' => 'motivo', 'TIPO' => 'textarea', 'VALIDATE' => 'CTS'));		
+	$TMP['BODY'] .= '</form>';
+	array_push($MODALS,CreateModal($TMP['MODAL'], $TMP['BODY'], $TMP['FOOTER']));
+	array_push($VARS,"const MODAL_".$TMP['MODAL']['ID']."_INSTANCE = bootstrap.Modal.getOrCreateInstance('#MODAL_".$TMP['MODAL']['ID']."');");
+	array_push($VARS,"const MODAL_".$TMP['MODAL']['ID']." = document.getElementById('MODAL_".$TMP['MODAL']['ID']."');");	
+	unset($JS_TMP);
+	
+	$JS_TMP = 'async function Display_Turnos_Borrar(){';
+		$JS_TMP .= 'if( $("#Table_FICHA_row").val() < 1){return;}';
+		$JS_TMP .= 'if( !$("#Row_FICHA_" + $("#Table_FICHA_row").val()).find("td").eq(7).html().trim().startsWith("RESERVADO")){ '.SF('MSG', '"Solo se puede cancelar turnos reservados"').'return;}';
+		$JS_TMP .= '$("#TURNO_BORRAR_FORM .alert").html("Estas por anular el turno para </br><b>"+$("#Row_FICHA_" + $("#Table_FICHA_row").val()).find("td").eq(2).html()+"</b> de las <b>"+$("#Row_FICHA_" + $("#Table_FICHA_row").val()).find("td").eq(6).html()+"</b>.</br> Esta accion no se puede revertir!");';
+		$JS_TMP .= 'FormErrorReset("TURNO_BORRAR_FORM");';
+		$JS_TMP .= 'FormReset("TURNO_BORRAR_FORM");';
+		$JS_TMP .= '$("#TURNO_BORRAR_FORM #ID_TURNO").val($("#Table_FICHA_row").val());';
+		$JS_TMP .= '$("#TURNO_BORRAR_FORM #ID_PERSONA").val($("#Row_FICHA_" + $("#Table_FICHA_row").val()).find("td").eq(8).html());';
+		$JS_TMP .= 'MODAL_TURNO_BORRAR_INSTANCE.show();';		
+	$JS_TMP .= '}';	
+
+	$JS_TMP .= 'async function MODAL_TURNO_BORRAR_Procesar(){';
+		$JS_TMP .= 'if($("#TURNO_BORRAR_FORM")[0].reportValidity()==false){return;}';
+		$JS_TMP .= 'FormErrorReset("TURNO_BORRAR_FORM");';
+		$JS_TMP .= 'const response = await $.ajax({url: "'.$LINK_BACK.'/Procesar_Turno_Borrar/",data: JSON.stringify(await FormDataPicker("TURNO_BORRAR_FORM"))});';
+		$JS_TMP .= 'if(response.RESULTADO == "OK"){';
+			$JS_TMP .= 'if(response.MESSAGE != ""){$.ajax({url: "'.$LINK_BACK.'/Procesar_Envio/",data: JSON.stringify({"CEI_TURNO":response.MESSAGE, "CTS_NOTIFICACION":"BAJA"}),beforeSend: function() {},complete: function() {},error: function() {}});}';
+			$JS_TMP .= 'TableLoad("FICHA");';
+			$JS_TMP .= 'Procesar_A_Ver();';
+			$JS_TMP .= 'MODAL_TURNO_BORRAR_INSTANCE.hide();';
+			$JS_TMP .= SF('OK');
+		$JS_TMP .= '}else{';
+			$JS_TMP .= 'if(response.MESSAGE != ""){'.SF('MSG', 'response.MESSAGE').'}';
+			$JS_TMP .= 'else{'.SF('ERROR').'}';
+		$JS_TMP .= '}';
+	$JS_TMP .= '}';	
+	array_push($FUNCTIONS,$JS_TMP);
+}
+
+if(in_array('Display_Descarga', $TABLE_FUNCTION)){ 
+	$JS_TMP = 'async function Display_Descarga(){';
+		$JS_TMP .= 'let dia = $("#MODAL_TURNOS .subcardcard_header_btn").html();';
+		$JS_TMP .= 'const responseSF = await Swal.fire({';
+			$JS_TMP .= 'html: "Descargar listado del día " + dia,';
+			$JS_TMP .= 'icon: "warning",';
+			$JS_TMP .= 'showCancelButton: true,';
+			$JS_TMP .= 'confirmButtonText: "Confirmar",';
+			$JS_TMP .= 'cancelButtonText: "Cancelar"';
+		$JS_TMP .= '});';
+		$JS_TMP .= 'if(responseSF.isConfirmed) {';
+			$JS_TMP .= 'const response = await $.ajax({url: "'.$LINK_BACK.'/Download_Turnos/", data: JSON.stringify({CJS_DATA: $("#Table_FICHA_advanced").val()})});';
+ 			$JS_TMP .= 'if(response.RESULTADO == "OK"){';
+				$JS_TMP .= 'var byteCharacters = atob(response.BASE64);';
+				$JS_TMP .= 'var byteNumbers = new Array(byteCharacters.length);';
+				$JS_TMP .= 'for (var i = 0; i < byteCharacters.length; i++){';
+					$JS_TMP .= 'byteNumbers[i] = byteCharacters.charCodeAt(i);';
+				$JS_TMP .= '}';
+				$JS_TMP .= 'var byteArray = new Uint8Array(byteNumbers);';
+				$JS_TMP .= 'var blob = new Blob([byteArray], { type: "application/pdf" });';
+
+				$JS_TMP .= 'var link = document.createElement("a");';
+				$JS_TMP .= 'link.href = URL.createObjectURL(blob);';
+				$JS_TMP .= 'link.download = response.ARCHIVO;';
+				$JS_TMP .= 'document.body.appendChild(link);';
+				$JS_TMP .= 'link.click();';
+				$JS_TMP .= 'document.body.removeChild(link);';
+			$JS_TMP .= '}else{';
+				$JS_TMP .= 'if(response.MESSAGE != ""){'.SF('MSG', 'response.MESSAGE').'}';
+				$JS_TMP .= 'else{'.SF('ERROR').'}';
+			$JS_TMP .= '}'; 
+		$JS_TMP .= '}';
+	$JS_TMP .= '}';	
+	array_push($FUNCTIONS,$JS_TMP);
+}
+
+if(in_array('Display_Hide', $TABLE_FUNCTION)){ 
+
+	$JS_TMP = 'async function Display_Hide(ACTION = "AUTO"){';
+		$JS_TMP .= 'var ICON = $("#Table_FICHA_Tools").find("i.ToolShowHide");';
+		$JS_TMP .= 'var ADV = JSON.parse($("#Table_FICHA_advanced").val());';
+		$JS_TMP .= "if(ACTION == 'FORZAR' || !ICON.hasClass('fa-eye-slash')){";
+			$JS_TMP .= "ICON.removeClass('fa-eye').addClass('fa-eye-slash text-danger');";
+			$JS_TMP .= "ADV['CTS_HIDE']=\"SI\";";
+			$JS_TMP .= "ICON.closest('button').tooltip('dispose').attr('data-bs-title', 'MOSTRAR ANULADOS').tooltip();";			
+		$JS_TMP .= "}else{";
+			$JS_TMP .= "ICON.removeClass('fa-eye-slash text-danger').addClass('fa-eye');";
+			$JS_TMP .= "ADV['CTS_HIDE']=\"NO\";";
+			$JS_TMP .= "ICON.closest('button').tooltip('dispose').attr('data-bs-title', 'OCULTAR ANULADOS').tooltip();";
+		$JS_TMP .= "}";
+		$JS_TMP .= '$("#Table_FICHA_advanced").val(JSON.stringify(ADV));';
+		$JS_TMP .= 'TableRefresh("FICHA");';
+	$JS_TMP .= "};";
+array_push($FUNCTIONS,$JS_TMP);
+}
+
+$JS_TMP .= '$(document).ready(function(){';
+	$JS_TMP .= 'inicializarSelect2("#PROFESIONAL", "#CALENDARIO_FORM", "'.$LINK_BACK.'/DL_Agendas", "Agenda", 0);';
+	$JS_TMP .= 'Procesar_A_Ver();';	
+$JS_TMP .= '});';
+array_push($FUNCTIONS,$JS_TMP);
+
+?>

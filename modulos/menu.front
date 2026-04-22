@@ -1,0 +1,32 @@
+<?php
+$RETURN = '';
+
+function BTN_Menu($Nombre, $Icono, $Color, $Link){
+	$RETURN = '<a class="btn-main" class="text-dark" href="'.$Link.'">';
+		$RETURN .= '<div class="btn-main-div rounded-4 " style="background-color:#'.$Color.';">';
+			$RETURN .= '<i class="fa-solid '.$Icono.' fa-3x"></i>';
+			$RETURN .= '<span class="btn-main-span text-light text-decoration-none">'.$Nombre.'</span>';
+		$RETURN .= '</div>';
+	$RETURN .= '</a>';
+	
+	return $RETURN;
+}
+
+// if($ROUTE_ACT != 'Inicio'){	$RETURN .= BTN_Menu('Volver', 'fa-rotate-left', 'F78D1E', $ROUTE_BACK);}
+if($ROUTE_ACT != 'Inicio'){	$RETURN .= BTN_Menu('Volver', 'fa-rotate-left', 'F78D1E', '/psico/public_html/App'.$ROUTE_BACK);}
+
+foreach($ROUTES_SYS as $KEY => $VALUE){
+	if(array_key_exists('menu',$VALUE)){
+		if($VALUE['Padre'] == $ROUTE_ACT){
+			if($PS[$KEY]['C'] == TRUE){$COLOR = '078BE3';$LINK = $KEY;}else{$COLOR = 'A7A9AC';$LINK = "#";}
+			// if($PS[$KEY]['C'] == TRUE){$COLOR = '01A19A';$LINK = $KEY;}else{$COLOR = 'A7A9AC';$LINK = "#";}
+			$RETURN .= BTN_Menu($VALUE['menu']['Display'], $VALUE['menu']['Icono'], $COLOR, $LINK);
+		}
+	}
+}
+
+if($ROUTE_ACT == 'Inicio'){ $RETURN .= BTN_Menu('Salir', 'fa-sign-out-alt', 'E23134', '/psico/public_html/App/Salir');}
+
+$MAIN = '<div class="d-flex flex-wrap justify-content-center mt-5">'.$RETURN.'</div>';
+?>
+
