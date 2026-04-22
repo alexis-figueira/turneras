@@ -556,7 +556,7 @@ CREATE TABLE `parametricas__turneras_categorias` (
   `reg_usuario` smallint UNSIGNED DEFAULT NULL,
   `reg_fecha` datetime DEFAULT NULL,
   `disponible` tinyint(1) NOT NULL DEFAULT '1'
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Volcado de datos para la tabla `parametricas__turneras_categorias`
@@ -586,8 +586,8 @@ DROP TABLE IF EXISTS `sys__turneras_permisos`;
 CREATE TABLE `sys__turneras_permisos` (
   `id_usuario` smallint UNSIGNED NOT NULL,
   `id_categoria` tinyint UNSIGNED NOT NULL,
-  `permiso` varchar(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  `permiso` varchar(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Volcado de datos para la tabla `sys__turneras_permisos`
@@ -632,7 +632,7 @@ CREATE TABLE `turneras__agenda` (
   `reg_usuario` smallint UNSIGNED NOT NULL,
   `reg_fecha` datetime NOT NULL,
   `disponible` tinyint(1) NOT NULL DEFAULT '1'
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Volcado de datos para la tabla `turneras__agenda`
@@ -669,7 +669,7 @@ CREATE TABLE `turneras__agendas_horarios` (
   `turnos` tinyint UNSIGNED NOT NULL,
   `reg_usuario` smallint UNSIGNED NOT NULL,
   `reg_fecha` datetime NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Volcado de datos para la tabla `turneras__agendas_horarios`
@@ -943,7 +943,7 @@ CREATE TABLE `turneras__agendas_periodo` (
   `reg_usuario` smallint UNSIGNED DEFAULT NULL,
   `reg_fecha` datetime NOT NULL,
   `disponible` tinyint(1) NOT NULL DEFAULT '1'
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Volcado de datos para la tabla `turneras__agendas_periodo`
@@ -986,7 +986,7 @@ CREATE TABLE `turneras__suspenciones` (
   `motivo` varchar(255) DEFAULT NULL,
   `reg_usuario` smallint UNSIGNED NOT NULL,
   `reg_fecha` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Volcado de datos para la tabla `turneras__suspenciones`
@@ -1015,7 +1015,7 @@ CREATE TABLE `turneras__turnos` (
   `reg_fecha` datetime NOT NULL,
   `reg_ip` varchar(32) NOT NULL,
   `estado` tinyint UNSIGNED NOT NULL DEFAULT '1' COMMENT '0=ANULADO\r\n1=PENDIENTE\r\n10=AUSENTE\r\n11=PRESENTE'
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Volcado de datos para la tabla `turneras__turnos`
