@@ -1,0 +1,43 @@
+<?php
+$ROUTES_SYS = array(
+	"Sistema"		=> array( "Archivo" => "menu", "PermisosDefault" => array(), "Padre" => "Inicio", "menu" => array("Display" => "Sistema", "Icono" => "fa-house"), "Color" => 'danger' ),
+		"Usuarios"		=> array( "Archivo" => "sistema/usuarios", "PermisosDefault" => array(), "Padre" => "Sistema", "menu" => array("Display" => "Usuarios", "Icono" => "fa-user",), "Permisos" => array('C','A','B','M'), "Color" => 'warning'),
+		
+	"Das" 			=> array(	"Archivo" => "menu",	"PermisosDefault" => array('C'),	"Padre" => "Inicio",	"menu" => array("Display" => "Das",			"Icono" => "fa-sitemap fa-landmark-dome")),
+	"Turneras" 		=> array(	"Archivo" => "menu",	"PermisosDefault" => array(''),		"Padre" => "Inicio",	"menu" => array("Display" => "Turneras",	"Icono" => "fa-calendar-days")),
+			"TurnerasAdministrar" 			=> array(	"Archivo" => "turneras/turneras_administrar",	"PermisosDefault" => array(),	"Padre" => "Turneras",	"menu" => array("Display" => "Configurar",	"Icono" => "fa-gears"),		"Permisos" => array('C','A','M','B','E')),
+			"TurnerasAgenda" 				=> array(	"Archivo" => "turneras/turneras_agenda",		"PermisosDefault" => array(),	"Padre" => "Turneras",	"menu" => array("Display" => "Agenda",	"Icono" => "fa-address-book"),		"Permisos" => array('C')),
+			"TurnerasCalendario" 			=> array(	"Archivo" => "turneras/turneras_calendario",	"PermisosDefault" => array(),	"Padre" => "Turneras",	"menu" => array("Display" => "Calendario",	"Icono" => "fa-calendar-days"),		"Permisos" => array('C')),
+			"TurnerasDas" 					=> array(	"Archivo" => "turneras/turneras_das",			"PermisosDefault" => array(),	"Padre" => "Turneras",	"menu" => array("Display" => "Recepcion 1823",	"Icono" => "fa-house-user"),		"Permisos" => array('C')),	
+		
+	"Psicologia" 	=> array(	"Archivo" => "menu",	"PermisosDefault" => array('C'),		"Padre" => "Inicio",	"menu" => array("Display" => "Psico",	"Icono" => "fa-brain")),
+			"PsicologiaCalendario" 			=> array(	"Archivo" => "psico/psico_calendario",	"PermisosDefault" => array(),	"Padre" => "Psicologia",	"menu" => array("Display" => "Calendario",	"Icono" => "fa-calendar-days"),		"Permisos" => array('C','A','M','B','E')),	
+			// "PsicologiaAdministrar" 			=> array(	"Archivo" => "psico/psico_administrar",	"PermisosDefault" => array(),	"Padre" => "Psicologia",	"menu" => array("Display" => "Configurar",	"Icono" => "fa-gears"),		"Permisos" => array('C','A','M','B','E')),	
+
+	"Inicio"		=> array( "Archivo" => "menu", "PermisosDefault" => array('C')),
+	"Perfil"		=> array( "Archivo" => "perfil", "PermisosDefault" => array('C')),
+	"Genericos"		=> array( "Archivo" => "genericos","PermisosDefault" => array('C')),
+);
+
+if($C_USER['ID'] == 1) {
+    $ROUTES_SYS["PsicologiaAdministrar"] = array("Archivo" => "psico/psico_administrar", "PermisosDefault" => array(), "Padre" => "Psicologia", "menu" => array("Display" => "Configurar", "Icono" => "fa-gears"), "Permisos" => array('C','A','M','B','E'));
+}
+$ROUTES_INFO = array("C" => "CONSULTA", "A" => "ALTA", "B" => "BAJA", "M" => "MODIFICAR", "E" => "ESPECIAL");
+
+$PP = (array) array('C' => FALSE);
+$PS = array();
+foreach($ROUTES_SYS as $K_ROUTE => $V_ROUTE){
+	$TMP = array();
+	if(array_key_exists('Permisos',$V_ROUTE)){foreach($V_ROUTE['Permisos'] as $KEY){$TMP[$KEY] = FALSE;}}
+	if(array_key_exists('PermisosDefault',$V_ROUTE)){foreach($V_ROUTE['PermisosDefault'] as $KEY){$TMP[$KEY] = TRUE;}}
+	if(!array_key_exists('C',$TMP)){$TMP['C'] = FALSE;}
+	if(array_key_exists($K_ROUTE, $C_PERMISOS)){foreach(str_split($C_PERMISOS[$K_ROUTE]) as $KEY){$TMP[$KEY] = TRUE;}}
+
+	$PS[$K_ROUTE] = $TMP;
+	if($K_ROUTE == $ROUTE_ACT){
+		$PP = $TMP;		
+		if(array_key_exists('Padre',$V_ROUTE)){$ROUTE_BACK = "/".$V_ROUTE['Padre'];}
+		if(array_key_exists('Archivo',$V_ROUTE)){$ROUTE_FILE = $V_ROUTE['Archivo'];}
+	}
+}
+?>
