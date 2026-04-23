@@ -1,0 +1,51 @@
+Poryecto de agenda para profesional de psicología.
+
+La necesidad del proyecto nace de crear una agende para el profesional donde se puedan otorgar turnos, para esto tendría que poder dar turnos, cancelarlos, modificarlos y consultarlos. También la idea es tener registro de que pacientes abonaron sus sesiones para que apartir de esto poder ver quien pago o no y tambiñen poder tener concomiento sobre los ingresos del profesional. 
+
+En un principio habia pensado en tener una tabla psicologia__pacientes donde esten los datos personales del mismo con su respectivo ID
+- id_paciente
+- dni
+- nombre
+- apellido
+- telefono
+- direccion
+- localidad 
+- reg_user -> usuario que lo registro 
+- reg_fecha -> fecha de creacion 
+
+
+Una tabla psicologia__turnos donde dejar registrado los turnos otorgados.
+- id_turno
+- id_paciente
+- fecha
+- horario
+- reg_usuario
+- reg_fecha
+- estado: 0-> anulado ; 1->pendiente ; 10->ausente ; 11->presente
+
+Una tabla psicologia__turnos_detalle
+- id_turno
+- valor_sesion
+- valor_pagado
+- fecha_pago
+- reg_user
+- reg_fecha 
+
+Creo que con esto alcanzaria para crear la base central del programa luego en caso de querer agregar cosas como por ejemplo, comentarios sobre la sesion o algo podría crear una tabla pacientes__historia_clinica o algo por el estilo donde podría relacionar el id_turno con un campo de texto para poder escribir un resumen, pero eso es algo para un futuro. 
+
+
+Por favor necesitaría que analices esta propuesta y me digas si es correcta si le faltan cosas si cambiarías cosas. 
+
+IMPORTANTE: necesito que seas lo mas crítico posible a modo de crear una buena base de datos central para poder en caso de ser necesario hacer la escalabilidad del proyecto en caso de ser nacesario. 
+
+
+En el caso de comenzar a crear tablas, por favor que las mismas comiencen con ' psicologia__ '
+
+----------------------------------------
+
+
+Bueno yo ahora pensaba distribuir todo de la siguiente manera. 
+Un modulo donde va a estar el calendario en pantalla, haciendo click en cada uno de los dias se va a abrir el modal correpondiente al dia seleccionado y mostrara los turnos que hay para ese dia. Desde ese mismo modal se va a poder cargar los turnos de ese día. Tamibién la idea es que al pasar el cursor por encima muestre los horarios de los turnos asignados ( toda la logica la vemos depsues) 
+
+Dsps otro modulo para pacientes, donde buscariamos por dni (o algund dato) y al hacer click en el paciente se abriria un modal con los turnos que tiene el mismo. 
+
