@@ -1,12 +1,13 @@
 <?php
 if($ROUTE_OPC == 'DL_Permisos_ADV'){
 	$RETURN['items'] = array();
+	
 	if($PP['A'] == 0 && $PP['M'] == 0){EJE($RETURN);}
 	if(CIJE('CES_ID_USUARIO') === TRUE){EJE($RETURN);};
 	if(CIJE('CTS_SISTEMA') === TRUE){EJE($RETURN);};
 	
 /* 	if($sJ['CTS_SISTEMA'] == 'EXP'){
-		$Que = QuerySelect("CALL ".$ZXS['O'].".`SP_ExpPermisosSectores`('".$sJ['CES_ID_USUARIO']."')");
+		$Que = QuerySelect("CALL ".ZXS_G.".`SP_ExpPermisosSectores`('".$sJ['CES_ID_USUARIO']."')");
 		while($Row = QueryFetch($Que)){
 			$RETURN['items'][$Row['sector']]['Nivel'] = $Row['nivel'];
 			$RETURN['items'][$Row['sector']]['Permisos']['C'] = ($Row['permiso'] != NULL && str_contains($Row['permiso'], 'C') ? 1 : 0);
@@ -17,11 +18,10 @@ if($ROUTE_OPC == 'DL_Permisos_ADV'){
 		}
 	} */
 	if($sJ['CTS_SISTEMA'] == 'TURNOS'){
-		// require_once './db_connect_portal.sys';
-		$Que = QuerySelect("SELECT `id_categoria`, `categoria`,'0' AS 'permiso' FROM ".$DBT['TURNERAS_PARAM_CATEGORIAS']." WHERE `disponible`='1' ORDER BY `categoria` ASC");
+		$Que = QuerySelect("SELECT `id_categoria`, `categoria`,'0' AS 'permiso' FROM ".$DBT['PARAMETRICAS_PSICO']." WHERE `disponible`='1' ORDER BY `categoria` ASC");
 		if(QueryNumRows($Que) > 0){
 			$PERMISO = array();
-			$QuePermisos = QuerySelect("SELECT `id_categoria`,`permiso` FROM ".$DBT['USERS_TURNERAS_PERMISOS']." WHERE `id_usuario`='".$sJ['CES_ID_USUARIO']."'");
+			$QuePermisos = QuerySelect("SELECT `id_categoria`,`permiso` FROM ".$DBT['PERMISOS_TURNERA']." WHERE `id_usuario`='".$sJ['CES_ID_USUARIO']."'");
 			if(QueryNumRows($QuePermisos) > 0){
 				while($RowPermisos = QueryFetch($QuePermisos)){
 					$PERMISO[$RowPermisos['id_categoria']]=$RowPermisos['permiso'];
@@ -47,7 +47,7 @@ elseif($ROUTE_OPC == 'Listado_Usuarios'){ // ya me muestra los usuarios
 	$RETURN['ROWS'] = [];
 	
 	if($PP['C'] != 1){EJE($RETURN);}
-	$ARRAY_ORDER = array(1 => '`usuario` {METHOD}', 2 => '`apellido` {METHOD}, `nombre` {METHOD}', 3 => '`cuil` {METHOD}', 4 => '`login_date` {METHOD}');
+	$ARRAY_ORDER = array(1 => '`usuario` {METHOD}', 2 => '`dni` {METHOD}', 3 => '`correo` {METHOD}', 4 => '`login_date` {METHOD}');
 	$FORM = LISTADO_QUERY($ARRAY_ORDER);
 	if($FORM['SEARCH'] != NULL){ $SEARCH = "WHERE U.`disponible` = '1' AND (U.`usuario` = '".$FORM['SEARCH']."' OR U.`dni` = '".$FORM['SEARCH']."')";}else{$SEARCH = "WHERE U.`disponible` = '1'";}
 	$Que = QuerySelect("SELECT U.`id_usuario`, U.`usuario`, U.`dni`, U.`login_date`, M.`correo` FROM ".$DBT['USERS']." U LEFT JOIN ".$DBT['USERS_MAIL']." M ON U.`id_usuario` = M.`id_usuario` ".$SEARCH." ORDER BY ".$FORM['ORDENAR']." LIMIT ".$FORM['LIMIT']." ,".$FORM['ROWS']);
@@ -132,7 +132,6 @@ elseif($ROUTE_OPC == 'Procesar_Usuario_Permisos'){
 	if(CIJE('CEI_ID_USUARIO') === TRUE){$sJ['CEI_ID_USUARIO'] = 0;};
 	$Que = QuerySelect("SELECT `id_usuario` FROM ".$DBT['USERS']." WHERE `id_usuario` = '".$sJ['CEI_ID_USUARIO']."' AND `disponible` = '1'");
 	if(QueryNumRows($Que)< 1){RJRE();}
-	
 	function AddPadre($ROUTE){
 		global $TMP_PERMISOS,$ROUTES_SYS;
 		if(array_key_exists($ROUTE,$ROUTES_SYS)){
@@ -140,6 +139,7 @@ elseif($ROUTE_OPC == 'Procesar_Usuario_Permisos'){
 			if($ROUTES_SYS[$ROUTE]['Padre'] != "Inicio"){AddPadre($ROUTES_SYS[$ROUTE]['Padre']);}
 		}
 	}
+
 	$TMP_PERMISOS = array();
 	foreach($ROUTES_SYS as $KEY_ROUTE => $VALUE_ROUTE){
 		if(array_key_exists('menu',$VALUE_ROUTE) && array_key_exists('Permisos',$VALUE_ROUTE)){
@@ -158,6 +158,68 @@ elseif($ROUTE_OPC == 'Procesar_Usuario_Permisos'){
 		QueryInsert("INSERT INTO ".$DBT['USERS_PERMISOS']."(`id_usuario`, `route`, `permiso`) VALUES ('".$sJ['CEI_ID_USUARIO']."','".$KEY."','".$VALUE."')");
 	}
 	RJRO();
+}
+elseif($ROUTE_OPC == 'Procesar_Usuario_PermisosADV'){
+	
+	if($PP['A'] == 0 && $PP['M'] == 0){RJRE();}
+	if(CIJE('CES_ID_USUARIO') === TRUE){RJRE('No se pudo procesar el usuario');}
+	if(CIJE('CTS_SISTEMA') === TRUE){RJRE('No se pudo procesar el sistema');}
+	
+	$TMP_PERMISOS = array();
+	
+/* 	if($sJ['CTS_SISTEMA'] == 'EXP'){
+		$Que = QuerySelect("SELECT S.`id_sector`,S.`sector`,S.`caratulacion`, P.`permiso` FROM ".$DBT['EXPEDIENTES_SECTORES']." S LEFT JOIN ".$DBT['EXPEDIENTES_AGENTES']." P ON P.`id_sector`=S.`id_sector` AND P.`id_usuario`='".$sJ['CES_ID_USUARIO']."' WHERE S.`disponible`='1' ORDER BY S.`sector` ASC");
+		while($Row = QueryFetch($Que)){
+			if(CIJE('CIB_'.$Row['sector'].'_C') === FALSE && $sJ['CIB_'.$Row['sector'].'_C'] == '1'){
+				if(!array_key_exists($Row['id_sector'],$TMP_PERMISOS)){$TMP_PERMISOS[$Row['id_sector']] = 'C';}else{$TMP_PERMISOS[$Row['id_sector']] .= 'C';}
+			}
+			if($Row['caratulacion'] != NULL){
+				if(CIJE('CIB_'.$Row['sector'].'_A') === FALSE && $sJ['CIB_'.$Row['sector'].'_A'] == '1'){
+					if(!array_key_exists($Row['id_sector'],$TMP_PERMISOS)){$TMP_PERMISOS[$Row['id_sector']] = 'A';}else{$TMP_PERMISOS[$Row['id_sector']] .= 'A';}
+				}
+			}
+			if(CIJE('CIB_'.$Row['sector'].'_M') === FALSE && $sJ['CIB_'.$Row['sector'].'_M'] == '1'){
+				if(!array_key_exists($Row['id_sector'],$TMP_PERMISOS)){$TMP_PERMISOS[$Row['id_sector']] = 'M';}else{$TMP_PERMISOS[$Row['id_sector']] .= 'M';}
+			}
+		}
+		QueryDelete("DELETE FROM  ".$DBT['EXPEDIENTES_AGENTES']." WHERE `id_usuario` = '".$sJ['CES_ID_USUARIO']."'");
+		if(count($TMP_PERMISOS) > 0){
+			foreach($TMP_PERMISOS as $KEY => $VALUE){
+				QueryInsert("INSERT INTO ".$DBT['EXPEDIENTES_AGENTES']."(`id_sector`, `id_usuario`, `permiso`) VALUES ('".$KEY."','".$sJ['CES_ID_USUARIO']."','".$VALUE."')");
+			}
+		}
+		QuerySelect("CALL ".ZXS_G.".`SP_ExpSectoresMiembros`");
+		RJRO();
+	} */
+	if($sJ['CTS_SISTEMA'] == 'TURNOS'){
+		$Que = QuerySelect("SELECT `id_categoria`, `categoria`,'0' AS 'permiso' FROM ".$DBT['PARAMETRICAS_PSICO']." WHERE `disponible`='1' ORDER BY `categoria` ASC");
+		while($Row = QueryFetch($Que)){
+			if(CIJE('CIB_'.$Row['categoria'].'_C') === FALSE && $sJ['CIB_'.$Row['categoria'].'_C'] == '1'){
+				if(!array_key_exists($Row['id_categoria'],$TMP_PERMISOS)){$TMP_PERMISOS[$Row['id_categoria']] = 'C';}else{$TMP_PERMISOS[$Row['id_categoria']] .= 'C';}
+			}
+			if(CIJE('CIB_'.$Row['categoria'].'_A') === FALSE && $sJ['CIB_'.$Row['categoria'].'_A'] == '1'){
+				if(!array_key_exists($Row['id_categoria'],$TMP_PERMISOS)){$TMP_PERMISOS[$Row['id_categoria']] = 'A';}else{$TMP_PERMISOS[$Row['id_categoria']] .= 'A';}
+			}
+			if(CIJE('CIB_'.$Row['categoria'].'_B') === FALSE && $sJ['CIB_'.$Row['categoria'].'_B'] == '1'){
+				if(!array_key_exists($Row['id_categoria'],$TMP_PERMISOS)){$TMP_PERMISOS[$Row['id_categoria']] = 'B';}else{$TMP_PERMISOS[$Row['id_categoria']] .= 'B';}
+			}
+			if(CIJE('CIB_'.$Row['categoria'].'_M') === FALSE && $sJ['CIB_'.$Row['categoria'].'_M'] == '1'){
+				if(!array_key_exists($Row['id_categoria'],$TMP_PERMISOS)){$TMP_PERMISOS[$Row['id_categoria']] = 'M';}else{$TMP_PERMISOS[$Row['id_categoria']] .= 'M';}
+			}
+			if(CIJE('CIB_'.$Row['categoria'].'_E') === FALSE && $sJ['CIB_'.$Row['categoria'].'_E'] == '1'){
+				if(!array_key_exists($Row['id_categoria'],$TMP_PERMISOS)){$TMP_PERMISOS[$Row['id_categoria']] = 'E';}else{$TMP_PERMISOS[$Row['id_categoria']] .= 'E';}
+			}
+		}
+		QueryDelete("DELETE FROM  ".$DBT['PERMISOS_TURNERA']." WHERE `id_usuario` = '".$sJ['CES_ID_USUARIO']."'");
+		if(count($TMP_PERMISOS) > 0){
+			foreach($TMP_PERMISOS as $KEY => $VALUE){
+				QueryInsert("INSERT INTO ".$DBT['PERMISOS_TURNERA']."(`id_categoria`, `id_usuario`, `permiso`) VALUES ('".$KEY."','".$sJ['CES_ID_USUARIO']."','".$VALUE."')");
+			}
+		}
+		RJRO();
+	}	
+	
+	RJRE('El sistema no es valido');
 }
 elseif($ROUTE_OPC == 'Procesar_Usuario_Status'){
 	if($PP['B'] == 0){RJRE();}
