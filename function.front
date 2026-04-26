@@ -1,0 +1,863 @@
+<?php
+// Decodifica el valor de useraccountcontrol del Active Directory
+function AD_UAC_Decode($flag, $SEARCH = 'DONT_EXPIRE_PASSWORD'){
+	$flags    = array();
+    $flaglist = array(
+               1 => 'SCRIPT',
+               2 => 'ACCOUNTDISABLE',
+               8 => 'HOMEDIR_REQUIRED',
+              16 => 'LOCKOUT',
+              32 => 'PASSWD_NOTREQD',
+              64 => 'PASSWD_CANT_CHANGE',
+             128 => 'ENCRYPTED_TEXT_PWD_ALLOWED',
+             256 => 'TEMP_DUPLICATE_ACCOUNT',
+             512 => 'NORMAL_ACCOUNT',
+            2048 => 'INTERDOMAIN_TRUST_ACCOUNT',
+            4096 => 'WORKSTATION_TRUST_ACCOUNT',
+            8192 => 'SERVER_TRUST_ACCOUNT',
+           65536 => 'DONT_EXPIRE_PASSWORD',
+          131072 => 'MNS_LOGON_ACCOUNT',
+          262144 => 'SMARTCARD_REQUIRED',
+          524288 => 'TRUSTED_FOR_DELEGATION',
+         1048576 => 'NOT_DELEGATED',
+         2097152 => 'USE_DES_KEY_ONLY',
+         4194304 => 'DONT_REQ_PREAUTH',
+         8388608 => 'PASSWORD_EXPIRED',
+        16777216 => 'TRUSTED_TO_AUTH_FOR_DELEGATION',
+        67108864 => 'PARTIAL_SECRETS_ACCOUNT'
+    );
+    for ($i=0; $i<=26; $i++){
+        if ($flag & (1 << $i)){
+            array_push($flags, 1 << $i);
+        }
+    }
+	if(in_array('65536', $flags)){return TRUE;}
+	return FALSE;
+}
+
+function CheckTools($TOOL){
+	$RETURN = FALSE;
+	foreach(str_split($TOOL) as $KEY){
+		if(is_array($GLOBALS['PP']) && array_key_exists($KEY,$GLOBALS['PP']) && $GLOBALS['PP'][$KEY] == TRUE){
+			$RETURN = TRUE;
+		}
+	}
+	return $RETURN;
+}
+
+function CreateModal($MODAL = array(), $BODY = NULL, $FOOTER = array()){
+	if(!is_array($MODAL) || !array_key_exists('ID',$MODAL) || !array_key_exists('TITLE',$MODAL) || $BODY == NULL){return NULL;}
+	
+	$MODAL_SIZE = '';
+	if(array_key_exists('SIZE',$MODAL) &&  $MODAL['SIZE'] == 'LG'){$MODAL_SIZE = 'modal-lg '; }
+	if(array_key_exists('SIZE',$MODAL) &&  $MODAL['SIZE'] == 'XL'){$MODAL_SIZE = 'modal-xl '; }
+	// if(array_key_exists('FS',$MODAL) &&  $MODAL['FS'] == 'LG'){$MODAL_SIZE .= ' modal-fullscreen-lg-down '; }else{ $MODAL_SIZE .= ' modal-fullscreen-md-down ';}
+	
+	$RETURN = '<div class="modal fade" id="MODAL_'.$MODAL['ID'].'" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="'.$MODAL['ID'].'" aria-hidden="true">';
+		$RETURN .= '<div class="modal-dialog '.$MODAL_SIZE.' modal-fullscreen-md-down modal-dialog-centered modal-dialog-scrollable">';
+			$RETURN .= '<div class="modal-content">';
+				$RETURN .= '<div class="modal-header gradient_table border border-2 border-bottom-0">';
+					$RETURN .= '<h1 class="modal-title modal-title_custom fs-5 w-100 text-center text-light" id="TITLE_'.$MODAL['ID'].'">'.$MODAL['TITLE'].'</h1>';
+					$RETURN .= '<button type="button" class="btn-close btn-close-white" onClick="ModalClose(this)" aria-label="Close"></button>';
+				$RETURN .= '</div>';
+				$RETURN .= '<div class="modal-body">';
+					$RETURN .= $BODY;
+				$RETURN .= '</div>';
+				if(is_array($FOOTER) && count($FOOTER) > 0){
+					$RETURN .= '<div class="modal-footer">';
+						foreach($FOOTER as $KEY_FOOTER => $VALUE_FOOTER){
+							$RETURN .= CreateFormFooter($KEY_FOOTER, $VALUE_FOOTER);
+						}
+					$RETURN .= '</div>';
+				}else{
+					$RETURN .= '<div class="modal-footer">';
+								$RETURN .= $FOOTER;
+					$RETURN .= '</div>';
+				}
+			$RETURN .= '</div>';
+		$RETURN .= '</div>';
+	$RETURN .= '</div>';
+	return $RETURN;
+}
+
+function CreateFormButton ($BUTTON){
+	if(array_key_exists('ID',$BUTTON)){
+		return '<button type="button" class="btn btn-outline-danger" onclick="'.$BUTTON['ACTION'].'()">'.$BUTTON['ID'].'</button>';
+	}
+}
+
+function CreateFormFooter($KEY_FOOTER, $VALUE_FOOTER){
+	if(array_key_exists('ID',$VALUE_FOOTER)){
+		if($KEY_FOOTER == 'CLOSE'){
+			return '<button type="button" class="btn btn-sm btn-footer btn-modal-footer btn-outline-danger btn-closer" onClick="ModalClose(this '.(array_key_exists('RETURN',$VALUE_FOOTER) ? ',\''.$VALUE_FOOTER['RETURN'].'\'' : '').')">'.$VALUE_FOOTER['ID'].'</button>';
+		}
+		if($KEY_FOOTER == 'RESET' && array_key_exists('ACTION',$VALUE_FOOTER) == TRUE){
+			return '<button type="button" class="btn btn-sm btn-footer btn-modal-footer btn-outline-warning" onclick="'.$VALUE_FOOTER['ACTION'].'()">'.$VALUE_FOOTER['ID'].'</button>';
+		}
+		if($KEY_FOOTER == 'BOTONV' && array_key_exists('ACTION',$VALUE_FOOTER) == TRUE){//BOTON VERDE
+			return '<button type="button" class="btn btn-sm btn-footer btn-modal-footer btn-outline-success" onclick="'.$VALUE_FOOTER['ACTION'].'()">'.$VALUE_FOOTER['ID'].'</button>';
+		}
+		if($KEY_FOOTER == 'BOTONA' && array_key_exists('ACTION',$VALUE_FOOTER) == TRUE){//BOTON AMARILLO
+			return '<button type="button" class="btn btn-sm btn-footer btn-modal-footer btn-outline-warning" onclick="'.$VALUE_FOOTER['ACTION'].'()">'.$VALUE_FOOTER['ID'].'</button>';
+		}
+		if($KEY_FOOTER == 'BOTONR' && array_key_exists('ACTION',$VALUE_FOOTER) == TRUE){//BOTON ROJO
+			return '<button type="button" class="btn btn-sm btn-footer btn-modal-footer btn-outline-danger" onclick="'.$VALUE_FOOTER['ACTION'].'()">'.$VALUE_FOOTER['ID'].'</button>';
+		}
+		if($KEY_FOOTER == 'SUBMIT'){
+			return '<button type="button" class="btn btn-sm btn-footer btn-modal-footer btn-outline-success FormBtnSubmit">'.$VALUE_FOOTER['ID'].'</button>';
+		}
+	}
+	return;
+}
+
+function CreateFormInput($INPUT){
+	$RETURN = '';
+	if(!array_key_exists('ID',$INPUT) || !array_key_exists('TIPO', $INPUT) || !array_key_exists('VALIDATE', $INPUT)){return '';};		
+	if(array_key_exists('VALUE', $INPUT) && $INPUT['VALUE'] != ''){$VALUE = $INPUT['VALUE'];}else{$VALUE = '';}
+	if(array_key_exists('PICKUP', $INPUT) && $INPUT['PICKUP'] == FALSE){$PICKUP = "";}else{$PICKUP = ' InputPickUp';}
+	if(array_key_exists('LABEL', $INPUT) && $INPUT['LABEL'] != ''){$LABEL = ucwords($INPUT['LABEL']);}else{$LABEL = ucwords($INPUT['ID']);}
+	if(array_key_exists('LOWERCASE', $INPUT) && $INPUT['LOWERCASE'] == TRUE){ $TYPE_TEXT = '';}else{$TYPE_TEXT = 'text-uppercase';}
+	
+	if($INPUT['TIPO'] == 'hidden'){
+		$RETURN = '<input type="hidden" class="InputPickUp" id="'.mb_strtoupper($INPUT['ID'],'utf-8').'" validate="'.$INPUT['VALIDATE'].'" value="'.$VALUE.'"'.($VALUE != '' ? ' data-value="'.$VALUE.'"' : '').'>';
+	}
+	if($INPUT['TIPO'] == 'text'){
+		$RETURN = '<div class="form-floating mb-3">';
+			$RETURN .= '<input type="text" class="form-control '.($INPUT['ID'] != 'password' ? $TYPE_TEXT : '').$PICKUP.' FormEnter'.'" id="'.mb_strtoupper($INPUT['ID'],'utf-8').'" validate="'.$INPUT['VALIDATE'].'" placeholder="'.$INPUT['ID'].'"';
+			// $RETURN .= '<input type="text" class="form-control '.($INPUT['ID'] != 'password' ? 'text-uppercase' : '').$PICKUP.' FormEnter'.'" id="'.mb_strtoupper($INPUT['ID'],'utf-8').'" validate="'.$INPUT['VALIDATE'].'" placeholder="'.$INPUT['ID'].'"';
+				if(array_key_exists('REQUIRED', $INPUT) && $INPUT['REQUIRED'] == TRUE){$RETURN .= ' required';}
+				if(array_key_exists('MAXLENGTH', $INPUT) && is_int((int)$INPUT['MAXLENGTH']) && $INPUT['MAXLENGTH'] >= 1){$RETURN .= ' maxlength="'.$INPUT['MAXLENGTH'].'"';}
+				if(array_key_exists('READONLY', $INPUT) && $INPUT['READONLY'] == TRUE){$RETURN .= ' disabled data-disabled="true"';}
+
+				$RETURN .= ' value="'.$VALUE.'"';
+				if($VALUE != ''){ $RETURN .= ' data-value="'.$VALUE.'"';}
+			$RETURN .= '>';
+			$RETURN .= '<label for="'.mb_strtoupper($INPUT['ID'],'utf-8').'">'.$LABEL.'</label>';
+		$RETURN .= '</div>';
+	}
+	if($INPUT['TIPO'] == 'correo'){
+		$RETURN = '<div class="form-floating mb-3">';
+			$RETURN .= '<input type="email" class="form-control '.$TYPE_TEXT.' '.$PICKUP.' FormEnter" id="'.mb_strtoupper($INPUT['ID'],'utf-8').'" validate="'.$INPUT['VALIDATE'].'" placeholder="'.$INPUT['ID'].'"';
+				if(array_key_exists('REQUIRED', $INPUT) && $INPUT['REQUIRED'] == TRUE){$RETURN .= ' required';}
+				if(array_key_exists('MAXLENGTH', $INPUT) && is_int((int)$INPUT['MAXLENGTH']) && $INPUT['MAXLENGTH'] >= 1){$RETURN .= ' maxlength="'.$INPUT['MAXLENGTH'].'"';}
+				if(array_key_exists('READONLY', $INPUT) && $INPUT['READONLY'] == TRUE){$RETURN .= ' disabled data-disabled="true"';}
+				$RETURN .= 'pattern="^[^ ]+@[^ ]+\\.[A-Za-z]{2,6}$" title="El formato no es valido"';
+				$RETURN .= ' value="'.$VALUE.'"';
+				if($VALUE != ''){ $RETURN .= ' data-value="'.$VALUE.'"';}
+			$RETURN .= '>';
+			$RETURN .= '<label for="'.mb_strtoupper($INPUT['ID'],'utf-8').'">'.$LABEL.'</label>';
+		$RETURN .= '</div>';
+	}
+	if($INPUT['TIPO'] == 'select'){
+		$RETURN = '<div class="form-floating mb-3">';
+			$RETURN .= '<select class="form-select '.$TYPE_TEXT.' '.$PICKUP.' FormEnter" id="'.mb_strtoupper($INPUT['ID'],'utf-8').'" validate="'.$INPUT['VALIDATE'].'"';
+				if(array_key_exists('REQUIRED', $INPUT) && $INPUT['REQUIRED'] == TRUE){$RETURN .= ' required';}
+				if($VALUE != ''){ $RETURN .= ' data-value="'.$VALUE.'"';}
+			$RETURN .= '>';
+				$RETURN .= '<option value="" disabled selected>Seleccionar...</option>';
+				if(array_key_exists('OPTIONS',$INPUT) && is_array($INPUT['OPTIONS']) && !empty($INPUT['OPTIONS'])){
+					foreach($INPUT['OPTIONS'] as $K_OPT => $V_OPT){
+						if(array_key_exists('VALUE',$V_OPT)){
+							$RETURN .= '<option value="'.$K_OPT.'"';
+							if($K_OPT == $VALUE){
+								$RETURN .= ' selected';
+							}
+							if(array_key_exists('STATUS',$V_OPT)){
+								if($V_OPT['STATUS'] == 0){
+									$RETURN .= ' disabled';
+								}
+							}
+							$RETURN .= '>'.$V_OPT['VALUE'].'</option>';
+						}
+					}
+				}
+			$RETURN .= '</select>';
+			$RETURN .= '<label for="'.mb_strtoupper($INPUT['ID'],'utf-8').'">'.$LABEL.'</label>';
+		$RETURN .= '</div>';									
+	}
+	if($INPUT['TIPO'] == 'select2'){
+		$RETURN = '<div class="form-floating mb-3">';
+			$RETURN .= '<select class="form-select select2js text-uppercase'.$PICKUP.' FormEnter" id="'.mb_strtoupper($INPUT['ID'],'utf-8').'" validate="'.$INPUT['VALIDATE'].'"';
+				if(array_key_exists('REQUIRED', $INPUT) && $INPUT['REQUIRED'] == TRUE){$RETURN .= ' required';}
+				if($VALUE != ''){ $RETURN .= ' data-value="'.$VALUE.'"';}
+			$RETURN .= '>';
+				if(array_key_exists('OPTIONS',$INPUT) && is_array($INPUT['OPTIONS']) && !empty($INPUT['OPTIONS'])){
+					foreach($INPUT['OPTIONS'] as $K_OPT => $V_OPT){
+						if(array_key_exists('VALUE',$V_OPT)){
+							$RETURN .= '<option value="'.$K_OPT.'"';
+							if($K_OPT == $VALUE){
+								$RETURN .= ' selected';
+							}
+							if(array_key_exists('STATUS',$V_OPT)){
+								if($V_OPT['STATUS'] == 0){
+									$RETURN .= ' disabled';
+								}
+							}
+							$RETURN .= '>'.$V_OPT['VALUE'].'</option>';
+						}
+					}
+				}
+			$RETURN .= '</select>';
+			//$RETURN .= '<label for="'.mb_strtoupper($INPUT['ID'],'utf-8').'" class="visually-hidden">'.$LABEL.'</label>';
+		$RETURN .= '</div>';									
+	}
+	if($INPUT['TIPO'] == 'datalist'){
+		$RETURN = '<div class="form-floating mb-3">';
+			$RETURN .= '<input type="hidden" class="'.$PICKUP.'" id="ID_'.mb_strtoupper($INPUT['ID'],'utf-8').'" validate="'.$INPUT['VALIDATE'].'" value="'.$VALUE.'"'.($VALUE != '' ? ' data-value="'.$VALUE.'"' : '').'>';				
+			$RETURN .= '<input class="form-control text-uppercase FormEnter" list="DLlist_'.mb_strtoupper($INPUT['ID'],'utf-8').'" id="'.mb_strtoupper($INPUT['ID'],'utf-8').'" placeholder="'.$INPUT['ID'].'" autocomplete="off"';
+				if(array_key_exists('REQUIRED', $INPUT) && $INPUT['REQUIRED'] == TRUE){$RETURN .= ' required';}
+			$RETURN .= '>';
+			$RETURN .= '<label for="'.mb_strtoupper($INPUT['ID'],'utf-8').'" class="form-label">'.$LABEL.'</label>';
+			$RETURN .= '<datalist id="DLlist_'.mb_strtoupper($INPUT['ID'],'utf-8').'"';
+				if(array_key_exists('RESET', $INPUT) && $INPUT['RESET'] == 'FALSE'){$RETURN .= 'data-reset="false"';}
+			$RETURN .= '>';
+				if(array_key_exists('OPTIONS',$INPUT) && is_array($INPUT['OPTIONS']) && !empty($INPUT['OPTIONS'])){
+					foreach($INPUT['OPTIONS'] as $K_OPT => $V_OPT){
+						if(array_key_exists('VALUE',$V_OPT)){
+							$RETURN .= '<option data-value="'.$K_OPT.'" value="'.$V_OPT['VALUE'].'"></option>';
+						}
+					}
+				}
+			$RETURN .= '</datalist>';
+		$RETURN .= '</div>';
+	}
+	if($INPUT['TIPO'] == 'number'){
+		$RETURN .= '<div class="form-floating mb-3">';
+			$RETURN .= '<input type="number" class="form-control'.$PICKUP.' FormEnter '.(array_key_exists('DECIMAL', $INPUT) && $INPUT['DECIMAL'] == FALSE ? 'ctl_numerico': 'ctl_numerico_decimal').'" id="'.mb_strtoupper($INPUT['ID'],'utf-8').'" validate="'.$INPUT['VALIDATE'].'" placeholder="'.$INPUT['ID'].'"';
+				if(array_key_exists('REQUIRED', $INPUT) && $INPUT['REQUIRED'] == TRUE){$RETURN .= ' required';}
+				if(array_key_exists('MIN', $INPUT) && is_int((int)$INPUT['MIN']) && $INPUT['MIN'] >= 1){$RETURN .= ' min="'.$INPUT['MIN'].'"';}
+				if(array_key_exists('MAX', $INPUT) && is_int((int)$INPUT['MAX'])){$RETURN .= ' max="'.$INPUT['MAX'].'"';}
+				if(array_key_exists('DECIMAL', $INPUT) && $INPUT['DECIMAL'] == FALSE){$RETURN .= ' step="1"';}else{$RETURN .= ' step="0.01"';}
+				if(array_key_exists('READONLY', $INPUT) && $INPUT['READONLY'] == TRUE){$RETURN .= ' disabled data-disabled="true"';}
+				
+				$RETURN .= ' value="'.$VALUE.'"';
+				if($VALUE != ''){ $RETURN .= ' data-value="'.$VALUE.'"';}
+				$RETURN .= ' data-text="'.$LABEL.'"';
+				if(array_key_exists('SHOW_FORMAT', $INPUT) && $INPUT['SHOW_FORMAT'] == TRUE){$RETURN .= 'data-ShowNumber="true"';}else{$RETURN .= 'data-ShowNumber="false"';}					
+			$RETURN .= '>';
+			$RETURN .= '<label for="'.mb_strtoupper($INPUT['ID'],'utf-8').'">'.$LABEL.'</label>';
+		$RETURN .= '</div>';
+	}
+	if($INPUT['TIPO'] == 'file'){
+		if(array_key_exists('UPLOAD', $INPUT) && $INPUT['UPLOAD'] == 'SUBMIT'){
+			$RETURN = '<div class="mb-3">';
+				$RETURN .= '<input class="form-control form-control-lg InputPickUpFile" type="file" id="'.mb_strtoupper($INPUT['ID'],'utf-8').'"';
+					if(array_key_exists('REQUIRED', $INPUT) && $INPUT['REQUIRED'] == TRUE){$RETURN .= ' required';}
+				$RETURN .= '>';
+			$RETURN .= '</div>';			
+		}else{
+			$RETURN = '<div class="mb-3">';
+				$RETURN .= '<input type="hidden" class="InputPickUp" id="ID_'.mb_strtoupper($INPUT['ID'],'utf-8').'" validate="CTS">';
+				$RETURN .= '<input class="form-control form-control-lg" type="file" id="'.mb_strtoupper($INPUT['ID'],'utf-8').'"';
+					if(array_key_exists('REQUIRED', $INPUT) && $INPUT['REQUIRED'] == TRUE){$RETURN .= ' required';}
+				$RETURN .= '>';
+			$RETURN .= '</div>';
+		}
+	}
+	if($INPUT['TIPO'] == 'textarea'){
+		$RETURN = '<div class="form-floating mb-3">';				
+			$RETURN .= '<textarea class="form-control'.$PICKUP.' FormEnter " placeholder="'.mb_strtoupper($INPUT['ID'],'utf-8').'" id="'.mb_strtoupper($INPUT['ID'],'utf-8').'" validate="'.$INPUT['VALIDATE'].'"';
+				if(array_key_exists('REQUIRED', $INPUT) && $INPUT['REQUIRED'] == TRUE){$RETURN .= ' required';}
+				if(array_key_exists('MAXLENGTH', $INPUT) && is_int((int)$INPUT['MAXLENGTH']) && $INPUT['MAXLENGTH'] >= 1){$RETURN .= ' maxlength="'.$INPUT['MAXLENGTH'].'"';}
+				if(array_key_exists('READONLY', $INPUT) && $INPUT['READONLY'] == TRUE){$RETURN .= ' disabled data-disabled="true"';}
+				if(array_key_exists('HEIGTH', $INPUT)){$RETURN .= ' style="height: '.$INPUT['HEIGTH'].'px"';}else{$RETURN .= ' style="height: 100px"';}
+			$RETURN .= '></textarea>';
+			$RETURN .= '<label for="'.mb_strtoupper($INPUT['ID'],'utf-8').'" class="form-label">'.$LABEL.'</label>';
+		$RETURN .= '</div>';
+	}
+	if($INPUT['TIPO'] == 'date'){
+		$RETURN = '<div class="form-floating mb-3">';
+			$RETURN .= '<input type="date" class="form-control text-uppercase'.$PICKUP.' FormEnter" id="'.mb_strtoupper($INPUT['ID'],'utf-8').'" validate="'.$INPUT['VALIDATE'].'" placeholder="'.$INPUT['ID'].'"';
+				if(array_key_exists('REQUIRED', $INPUT) && $INPUT['REQUIRED'] == TRUE){$RETURN .= ' required';}
+				if(array_key_exists('MIN', $INPUT)){$RETURN .= ' min="'.$INPUT['MIN'].'"';}
+				if(array_key_exists('READONLY', $INPUT) && $INPUT['READONLY'] == TRUE){$RETURN .= ' disabled data-disabled="true"';}
+				$RETURN .= ' value="'.$VALUE.'"';
+				if($VALUE != ''){ $RETURN .= ' data-value="'.$VALUE.'"';}
+			$RETURN .= '>';
+			$RETURN .= '<label for="'.mb_strtoupper($INPUT['ID'],'utf-8').'">'.$LABEL.'</label>';
+		$RETURN .= '</div>';
+	}
+	if($INPUT['TIPO'] == 'time'){
+		$RETURN = '<div class="form-floating mb-3">';
+			$RETURN .= '<input type="time" class="form-control text-uppercase'.$PICKUP.' FormEnter" id="'.mb_strtoupper($INPUT['ID'],'utf-8').'" validate="'.$INPUT['VALIDATE'].'" placeholder="'.$INPUT['ID'].'"';
+				if(array_key_exists('REQUIRED', $INPUT) && $INPUT['REQUIRED'] == TRUE){$RETURN .= ' required';}
+				if(array_key_exists('READONLY', $INPUT) && $INPUT['READONLY'] == TRUE){$RETURN .= ' disabled data-disabled="true"';}
+				$RETURN .= ' value="'.$VALUE.'"';
+				if($VALUE != ''){ $RETURN .= ' data-value="'.$VALUE.'"';}
+			$RETURN .= ' autocomplete="off">';
+			$RETURN .= '<label for="'.mb_strtoupper($INPUT['ID'],'utf-8').'">'.$LABEL.'</label>';
+		$RETURN .= '</div>';
+	}
+	return $RETURN;
+}
+
+function CreateFormUpload($INPUT, $FORM, $TYPE = 'EXCEL'){
+	$RETURN = '$(document).ready(function(){';
+		$RETURN .= '$("#'.$FORM.' #'.$INPUT.'").on("change",function(e){';
+			$RETURN .= 'var FilesTypesAccept = [';
+				if(array_key_exists($TYPE,$GLOBALS['CFG_UPLOADFILES']['TYPE'])){
+					foreach($GLOBALS['CFG_UPLOADFILES']['TYPE'][$TYPE] as $VALUE){
+						$RETURN .= '"'.$VALUE.'",';
+					}
+				}
+			$RETURN .= '];';
+			$RETURN = str_replace(',];','];',$RETURN);
+			$RETURN .= 'var FilesSizeMax = '.$GLOBALS['CFG_UPLOADFILES']['SIZE'].';';
+			
+			$RETURN .= 'var oFile = $("#'.$FORM.' #'.$INPUT.'")[0].files[0];';		
+			$RETURN .= 'if(oFile != undefined){';
+				$RETURN .= 'var sFilename = oFile.name;';	
+				$RETURN .= 'if(!FilesTypesAccept.includes(oFile.type)){console.log(oFile.type);'.SF('MSG','"Extension no valida "').'$("#'.$FORM.' #'.$INPUT.'").val("");return;}';
+				$RETURN .= 'if(oFile.size > parseInt(FilesSizeMax)){'.SF('MSG','"El archivo es muy pesado"').'$("#'.$FORM.' #'.$INPUT.'").val("");return;}';
+				$RETURN .= 'var BTN = $(this).parents(".modal").find(".FormBtnSubmit");';
+				$RETURN .= 'BTN.prop("disabled",true);';
+				$RETURN .= 'var reader = new FileReader();';
+				$RETURN .= 'reader.readAsDataURL(oFile);';
+				$RETURN .= 'reader.onload = function(e) {';
+					$RETURN .= 'var data = e.target.result;';
+					$RETURN .= 'var formData = {};';
+					$RETURN .= 'formData["CTS_NAME"] = oFile.name;';
+					$RETURN .= 'formData["CEI_SIZE"] = oFile.size;';
+					$RETURN .= 'formData["CTS_TYPE"] = oFile.type;';
+					$RETURN .= 'formData["CBN_FILE"] = data.split(",")[1];';
+					$RETURN .= 'formData["CTS_FORMAT"] = "'.$TYPE.'";';
+					$RETURN .= '$.ajax({url: "/Archivos/Procesar_Upload/",data: JSON.stringify(formData)}).done(function (response){';
+						$RETURN .= 'if(response.RESULTADO == "OK"){';
+							$RETURN .= '$("#'.$FORM.' #ID_'.$INPUT.'").val(response.FILE);';
+						$RETURN .= '}else{';
+							$RETURN .= 'if(response.MESSAGE != \'\'){'.SF('MSG', 'response.MESSAGE').'}';
+							$RETURN .= 'else{'.SF('ERROR').'}';
+						$RETURN .= '}';
+					$RETURN .= '});';
+					$RETURN .= 'BTN.prop("disabled",false);';
+				$RETURN .= '};';
+			$RETURN .= '};';			
+		$RETURN .= '});';			
+	$RETURN .= '});';
+	return $RETURN;
+}
+
+function CreateFormUploadValidate($INPUT, $FORM, $TYPE = 'EXCEL'){
+	$RETURN = '$(document).ready(function(){';
+		$RETURN .= '$("#'.$FORM.' #'.$INPUT.'").on("change",function(e){';
+			$RETURN .= 'var FilesTypesAccept = [';
+				if(array_key_exists($TYPE,$GLOBALS['CFG_UPLOADFILES']['TYPE'])){
+					foreach($GLOBALS['CFG_UPLOADFILES']['TYPE'][$TYPE] as $VALUE){
+						$RETURN .= '"'.$VALUE.'",';
+					}
+				}
+			$RETURN .= '];';
+			$RETURN = str_replace(',];','];',$RETURN);
+			$RETURN .= 'var FilesSizeMax = '.$GLOBALS['CFG_UPLOADFILES']['SIZE'].';';
+			
+			$RETURN .= 'var oFile = $("#'.$FORM.' #'.$INPUT.'")[0].files[0];';		
+			$RETURN .= 'if(oFile != undefined){';
+				$RETURN .= 'var sFilename = oFile.name;';	
+				$RETURN .= 'if(!FilesTypesAccept.includes(oFile.type)){'.SF('MSG','"Extension no valida "').'$("#'.$FORM.' #'.$INPUT.'").val("");return;}';
+				$RETURN .= 'if(oFile.size > parseInt(FilesSizeMax)){'.SF('MSG','"El archivo es muy pesado"').'$("#'.$FORM.' #'.$INPUT.'").val("");return;}';
+			$RETURN .= '};';			
+		$RETURN .= '});';			
+	$RETURN .= '});';
+	return $RETURN;
+}
+
+function CreateMain($TABS, $TABLE){
+	$RETURN = '<div class="card border-dark mx-auto" style="width: 98%">';
+		$RETURN .= '<div class="card-header card-main  gradient_card rounded-2 text-light" id="card-main" style="--bs-bg-opacity: .95;">';
+			$RETURN .= '<div class="d-grid gap-2 d-flex justify-content-center">';
+				$RETURN .= '<ul class="nav nav-pills tabs-buttons">';
+					if(isset($TABS) && is_array($TABS)){
+						foreach($TABS as $K_TAB => $V_TAB){
+							$RETURN .= '<li class="nav-item">';
+								$RETURN .= '<button class="nav-link text-light mx-1" type="button" role="tab" aria-controls="'.$K_TAB.'" aria-selected="false">';
+									$RETURN .= '<div class="d-inline-flex">'.$V_TAB['ICON'].'</div>';
+									$RETURN .= '<div class="d-inline-block"><span class="d-none d-md-block text-center card_header_btn">'.$V_TAB['TITLE'].'</span></div>';									
+								$RETURN .= '</button>';
+							$RETURN .= '</li>';
+						}
+					}
+				$RETURN .= '</ul>';
+			$RETURN .= '</div>';
+		$RETURN .= '</div>';
+		$RETURN .= '<div class="card text-center border border-0">';
+			$RETURN .= '<div class="card-body px-4 py-2" id="card-body-main"> ';
+				$RETURN .= '<div class="tab-content tabs-body">';
+					if(isset($TABS) && is_array($TABS)){
+						foreach($TABS as $K_TAB => $V_TAB){
+							if(array_key_exists($K_TAB, $TABLE)){								
+								$RETURN .= '<div class="tab-pane fade" role="tabpanel" aria-labelledby="'.$K_TAB.'" tabindex="0">';
+									$RETURN .= CreateMainTable($K_TAB,$V_TAB['TITLE'], $TABLE[$K_TAB]);
+								$RETURN .= '</div>';							
+							}
+						}
+					}
+				$RETURN .= '</div>';
+			$RETURN .= '</div>';
+		$RETURN .= '</div>';
+	$RETURN .= '</div>';
+	
+	return $RETURN;
+}
+
+function CreateMainModal($SUBTABS, $SUBTABLE){
+	$RETURN = '<div class="card border-dark mx-auto mt-4 mb-0" style="width: 98%">';
+		$RETURN .= '<div class="card-header card-main  gradient_card rounded-2 text-light" id="subcard-main" style="--bs-bg-opacity: .95;">';
+			$RETURN .= '<div class="d-grid gap-2 d-flex justify-content-center">';
+				$RETURN .= '<ul class="nav nav-pills subtabs-buttons">';
+					if(isset($SUBTABS) && is_array($SUBTABS)){
+						foreach($SUBTABS as $K_TAB => $V_TAB){
+							$RETURN .= '<li class="nav-item">';
+								$RETURN .= '<button class="nav-link text-light mx-1" type="button" role="tab" aria-controls="'.$K_TAB.'" aria-selected="false">';
+									$RETURN .= '<div class="d-inline-block"><span class="d-none d-md-block text-center subcardcard_header_btn">'.$V_TAB.'</span></div>';									
+								$RETURN .= '</button>';
+							$RETURN .= '</li>';
+						}
+					}
+				$RETURN .= '</ul>';
+			$RETURN .= '</div>';
+		$RETURN .= '</div>';
+		$RETURN .= '<div class="card text-center border border-0">';
+			$RETURN .= '<div class="card-body px-4 py-2" id="subcardcard-body-main"> ';
+				$RETURN .= '<div class="tab-content subtabs-body">';
+					if(isset($SUBTABS) && is_array($SUBTABS)){
+						foreach($SUBTABS as $K_TAB => $V_TAB){
+							if(array_key_exists($K_TAB, $SUBTABLE)){								
+								$RETURN .= '<div class="tab-pane fade" role="tabpanel" aria-labelledby="'.$K_TAB.'" tabindex="0">';
+									$RETURN .= CreateMainTable($K_TAB,$V_TAB, $SUBTABLE[$K_TAB], TRUE);
+								$RETURN .= '</div>';							
+							}
+						}
+					}
+				$RETURN .= '</div>';
+			$RETURN .= '</div>';
+		$RETURN .= '</div>';
+	$RETURN .= '</div>';
+	
+	return $RETURN;
+}
+
+function CreateMainTable($ID,$TITLE, $TABLE, $MODAL = FALSE){
+	if(!is_array($TABLE) || !isset($TABLE['COLUMNAS']) || !isset($TABLE['AJAX_URL']) || (!isset($TABLE['HERRAMIENTAS']) && !isset($TABLE['HERRAMIENTAS_NEW'])) || !isset($TABLE['SETTING'])){
+		return;
+	}
+	$N_COL = 0;	
+	$TMP = CreateTableTools($ID, $TABLE);
+	
+	$RETURN = '<div class="card-body p-0">';
+		$RETURN .= CreateTable($ID, $TABLE, $MODAL);			
+	$RETURN .= '</div>';
+	$RETURN .= '<div class="card-footer text-light text-center gradient_table">';
+		$RETURN .= '<div class="row align-items-center">';
+			$RETURN .= '<div class="col-lg-3 text-start  d-none d-lg-block	text-white" id="Table_'.$ID.'_Pagination"></div>';						
+			$RETURN .= '<div class="col-lg-6 col-12 text-center text-white" id="Table_'.$ID.'_Tools">';
+				$RETURN .= $TMP;
+			$RETURN .= '</div>';
+			$RETURN .= '<div class="col-lg-3 text-end d-none d-lg-block text-white" id="Table_'.$ID.'_Resultados"></div>';		
+		$RETURN .= '</div>';
+	$RETURN .= '</div>';
+	
+	return $RETURN;
+}	
+
+function CreateTable($ID, $TABLE, $MODAL = FALSE){
+	if(!isset($TABLE['SETTING']['ORDENAR'])){$TABLE['SETTING']['ORDENAR'] = "TRUE";}
+	if(!isset($TABLE['SETTING']['ORDENAR_COL'])){$TABLE['SETTING']['ORDENAR_COL'] = 1;}
+	if(!isset($TABLE['SETTING']['ORDENAR_METHOD'])){$TABLE['SETTING']['ORDENAR_METHOD'] = 'asc';}
+	if(!isset($TABLE['SETTING']['ADVANCED'])){$TABLE['SETTING']['ADVANCED'] = '';}
+	
+	$TABLE_CFG = ' data-AJAX="'.$TABLE['AJAX_URL'].'"';
+	if(array_key_exists('SETTING',$TABLE) && array_key_exists('DOBLE_CLICK',$TABLE['SETTING']) && in_array($TABLE['SETTING']['DOBLE_CLICK'], $GLOBALS['TABLE_FUNCTION'])){
+		$TABLE_CFG .= ' data-DOBLECLICK="'.$TABLE['SETTING']['DOBLE_CLICK'].'"';
+	}
+	if(array_key_exists('ADV_JSON', $TABLE['SETTING'])){ $TABLE_CFG .= ' data-ADV="JSON"';}else{$TABLE_CFG .= ' data-ADV="STR"';}
+	if($TABLE['SETTING']['ORDENAR'] == "TRUE"){$TABLE_CFG .= ' data-ORD="TRUE"';}else{$TABLE_CFG .= ' data-ORD="FALSE"';}
+	
+	$N_COL = 0;
+	$RETURN = '<div class="table-responsive shadow bg-body-tertiary w-100 mx-0 px-0 pb-0 mb-0 '.($MODAL == FALSE ? 'tableFixHead' : 'SubtableFixHead').' rounded-top" id="TableDiv'.$ID.'">';
+		$RETURN .= '<table class="table table-striped table-hover table-bordered table-sm align-middle text-center mb-0 pb-0" id="Table'.$ID.'"'.$TABLE_CFG.'>';
+			$RETURN .= '<thead class="gradient_table">';
+				$RETURN .= '<tr>';
+					foreach($TABLE['COLUMNAS'] as $KEY_COL => $VALUE_COL){
+						if(!isset($VALUE_COL['DISPLAY']) || (isset($VALUE_COL['DISPLAY']) && $VALUE_COL['DISPLAY'] != 'NONE')){
+							$N_COL++;
+							$RETURN .= '<th class="'.(array_key_exists('WIDTH',$VALUE_COL) ? '' : 'text-nowrap ').((isset($VALUE_COL['DISPLAY']) && $VALUE_COL['DISPLAY'] == 'MD') ? ' d-none d-lg-table-cell' : '').'"'.($TABLE['SETTING']['ORDENAR'] == "TRUE" ? 'onClick="TableOrderBySet(\''.$ID.'\',\''.$N_COL.'\')"':'').' data-DB="'.(array_key_exists('DB',$VALUE_COL) ? $VALUE_COL['DB'] : mb_strtoupper($VALUE_COL['COLUMNA'],'utf-8')).'" '.(array_key_exists('WIDTH',$VALUE_COL) ? 'style="width: '.$VALUE_COL['WIDTH'].'"' : '').' >';
+								$RETURN .= $VALUE_COL['COLUMNA'];
+								if(!array_key_exists('ORDER',$VALUE_COL) ||  (array_key_exists('ORDER',$VALUE_COL) && $VALUE_COL['ORDER'] == FALSE)){$RETURN .= ' <span id="OrderByCol_'.$ID.'_'.$N_COL.'"></span>';}
+							$RETURN .= '</th>';
+						}
+					}
+				$RETURN .= '</tr>';
+			$RETURN .= '</thead>';
+			$RETURN .= '<tbody class="border" id="TableBody'.$ID.'">';
+				$RETURN .= '<tr><td colspan="'.$N_COL.'">No hay resultados para mostrar!</td></tr>';
+			$RETURN .= '</tbody>';
+		$RETURN .= '</table>';
+	$RETURN .= '</div>';				
+	
+	$RETURN .= '<input type="hidden" id="Table_'.$ID.'_row" value="">';
+	$RETURN .= '<input type="hidden" id="Table_'.$ID.'_ordenar_col" value="'.$TABLE['SETTING']['ORDENAR_COL'].'">';
+	$RETURN .= '<input type="hidden" id="Table_'.$ID.'_ordenar_method" value="'.$TABLE['SETTING']['ORDENAR_METHOD'].'">';
+	$RETURN .= '<input type="hidden" id="Table_'.$ID.'_page" value="1">';
+	$RETURN .= '<input type="hidden" id="Table_'.$ID.'_page_total" value="1">';	
+	$RETURN .= '<input type="hidden" id="Table_'.$ID.'_advanced" value="'.$TABLE['SETTING']['ADVANCED'].'">';
+	$RETURN .= '<input type="hidden" id="Table_'.$ID.'_search" value="">';
+
+	return $RETURN;
+}
+
+function CreateTableTools($ID, $TABLE, $MAIN = TRUE){
+	global $CFG_ICONS;
+	if($MAIN == TRUE){ $CSS = 'btn btn-link text-white px-1 m-0';}else{ $CSS = 'btn btn-outline-dark btn-sm me-1';}
+	$VR = '<div class="vr align-middle"></div>';
+	$RETURN = NULL;
+	if(array_key_exists('HERRAMIENTAS_NEW', $TABLE)){
+		foreach($TABLE['HERRAMIENTAS_NEW'] as $TOOL){
+			if(!array_key_exists('TITLE', $TOOL)){continue;}
+			if(!array_key_exists('ICON', $TOOL)){continue;}
+			if(!array_key_exists('FN', $TOOL)){continue;}
+			if(!array_key_exists('CLICK', $TOOL)){continue;}
+			if(!array_key_exists('PERMISOS', $TOOL)){continue;}
+			if(!array_key_exists('ROW_SELECTED', $TOOL)){$TOOL['ROW_SELECTED'] = FALSE;}
+
+			if(CheckTools($TOOL['PERMISOS']) === TRUE){
+				if($RETURN != NULL){$RETURN .= $VR;}
+				$RETURN .= '<button type="button" class="'.$CSS.($TOOL['ROW_SELECTED'] != FALSE ? ' btn-row' : '').'" onClick="'.$TOOL['CLICK'].'" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="'.$TOOL['TITLE'].'">'.$TOOL['ICON'].'</button>';
+				if($TOOL['FN'] != '' && !in_array($TOOL['FN'],$GLOBALS['TABLE_FUNCTION'])){array_push($GLOBALS['TABLE_FUNCTION'],$TOOL['FN']);}
+			}
+			if($TOOL['FN'] != '' && strpos($TOOL['FN'], "Display_") === 0 && substr($TOOL['FN'], -12) === "_QuickSearch"){
+				ModalQuickSearch($ID, $TABLE);
+			}
+		}
+	}else{
+		if(array_key_exists('HERRAMIENTAS', $TABLE)){				
+			if(array_key_exists('ALTA', $TABLE['HERRAMIENTAS']) && CheckTools($TABLE['HERRAMIENTAS']['ALTA']) == TRUE){
+				if($RETURN != NULL){$RETURN .= $VR;}
+				$RETURN .= '<button type="button" class="'.$CSS.'" onClick="TableRowClick(\''.$ID.'\',0); Display_'.$ID.'_Principal()" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="NUEVO">'.$CFG_ICONS['ALTA'].'</button>';
+				if(!in_array('Display_'.$ID.'_Principal',$GLOBALS['TABLE_FUNCTION'])){array_push($GLOBALS['TABLE_FUNCTION'],'Display_'.$ID.'_Principal');}
+			}
+			if(array_key_exists('ADD', $TABLE['HERRAMIENTAS']) && CheckTools($TABLE['HERRAMIENTAS']['ADD']) == TRUE){
+				if($RETURN != NULL){$RETURN .= $VR;}
+				$RETURN .= '<button type="button" class="'.$CSS.'" onClick="Display_'.$ID.'_Add()" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="AGREGAR">'.$CFG_ICONS['ADD'].'</button>';
+				array_push($GLOBALS['TABLE_FUNCTION'],'Display_'.$ID.'_Add');
+			}
+			if(array_key_exists('LESS', $TABLE['HERRAMIENTAS']) && CheckTools($TABLE['HERRAMIENTAS']['LESS']) == TRUE){
+				if($RETURN != NULL){$RETURN .= $VR;}
+				$RETURN .= '<button type="button" class="'.$CSS.'" onClick="Display_'.$ID.'_Less()" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="DESCONTAR">'.$CFG_ICONS['LESS'].'</button>';
+				array_push($GLOBALS['TABLE_FUNCTION'],'Display_'.$ID.'_Less');
+			}
+			if(array_key_exists('EDIT', $TABLE['HERRAMIENTAS']) && CheckTools($TABLE['HERRAMIENTAS']['EDIT']) == TRUE){
+				if($RETURN != NULL){$RETURN .= $VR;}
+				$RETURN .= '<button type="button" class="'.$CSS.' btn-row" onClick="Display_'.$ID.'_Principal()" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="EDITAR">'.$CFG_ICONS['EDIT'].'</button>';
+				if(!in_array('Display_'.$ID.'_Principal',$GLOBALS['TABLE_FUNCTION'])){array_push($GLOBALS['TABLE_FUNCTION'],'Display_'.$ID.'_Principal');}
+			}
+			if(array_key_exists('EDIT2', $TABLE['HERRAMIENTAS']) && CheckTools($TABLE['HERRAMIENTAS']['EDIT2']) == TRUE){
+				if($RETURN != NULL){$RETURN .= $VR;}
+				$RETURN .= '<button type="button" class="'.$CSS.' btn-row" onClick="Display_'.$ID.'_Editar()" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="EDITAR">'.$CFG_ICONS['EDIT'].'</button>';
+				if(!in_array('Display_'.$ID.'_Editar',$GLOBALS['TABLE_FUNCTION'])){array_push($GLOBALS['TABLE_FUNCTION'],'Display_'.$ID.'_Editar');}
+			}
+			if(array_key_exists('PASSWORD', $TABLE['HERRAMIENTAS']) && CheckTools($TABLE['HERRAMIENTAS']['PASSWORD']) == TRUE){
+				if($RETURN != NULL){$RETURN .= $VR;}
+				$RETURN .= '<button type="button" class="'.$CSS.' btn-row" onClick="Display_'.$ID.'_PassBlank()" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="BLANQUEAR CONTRASEÑA">'.$CFG_ICONS['KEY'].'</button>';
+				array_push($GLOBALS['TABLE_FUNCTION'],'Display_'.$ID.'_PassBlank');
+			}
+			if(array_key_exists('DERIVAR', $TABLE['HERRAMIENTAS']) && CheckTools($TABLE['HERRAMIENTAS']['DERIVAR']) == TRUE){
+				if($RETURN != NULL){$RETURN .= $VR;}
+				$RETURN .= '<button type="button" class="'.$CSS.'" onClick="Display_'.$ID.'_Derivar()" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="DERIVAR">'.$CFG_ICONS['DERIVAR'].'</button>';
+				array_push($GLOBALS['TABLE_FUNCTION'],'Display_'.$ID.'_Derivar');
+			}
+			if(array_key_exists('DESDERIVAR', $TABLE['HERRAMIENTAS']) && CheckTools($TABLE['HERRAMIENTAS']['DESDERIVAR']) == TRUE){
+				if($RETURN != NULL){$RETURN .= $VR;}
+				$RETURN .= '<button type="button" class="'.$CSS.' btn-row" onClick="Display_'.$ID.'_Desderivar()" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="DESDERIVAR">'.$CFG_ICONS['DERIVAR'].'</button>';
+				array_push($GLOBALS['TABLE_FUNCTION'],'Display_'.$ID.'_Desderivar');
+			}
+			if(array_key_exists('PERMISOS', $TABLE['HERRAMIENTAS']) && CheckTools($TABLE['HERRAMIENTAS']['PERMISOS']) == TRUE){
+				if($RETURN != NULL){$RETURN .= $VR;}
+				$RETURN .= '<button type="button" class="'.$CSS.' btn-row" onClick="Display_'.$ID.'_Permisos()" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="PERMISOS">'.$CFG_ICONS['CONFIG'].'</button>';
+				array_push($GLOBALS['TABLE_FUNCTION'],'Display_'.$ID.'_Permisos');
+			}
+			if(array_key_exists('BINS', $TABLE['HERRAMIENTAS']) && CheckTools($TABLE['HERRAMIENTAS']['BINS']) == TRUE){
+				if($RETURN != NULL){$RETURN .= $VR;}
+				$RETURN .= '<button type="button" class="'.$CSS.' btn-row" onClick="Display_'.$ID.'_Bins()" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="BINS">'.$CFG_ICONS['BINS'].'</button>';
+				array_push($GLOBALS['TABLE_FUNCTION'],'Display_'.$ID.'_Bins');
+			}
+			if(array_key_exists('CAJAS', $TABLE['HERRAMIENTAS']) && CheckTools($TABLE['HERRAMIENTAS']['CAJAS']) == TRUE){
+				if($RETURN != NULL){$RETURN .= $VR;}
+				$RETURN .= '<button type="button" class="'.$CSS.' btn-row" onClick="Display_'.$ID.'_Cajas()" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="CAJAS">'.$CFG_ICONS['CAJAS'].'</button>';
+				array_push($GLOBALS['TABLE_FUNCTION'],'Display_'.$ID.'_Cajas');
+			}
+			if(array_key_exists('RECYCLE', $TABLE['HERRAMIENTAS']) && CheckTools($TABLE['HERRAMIENTAS']['RECYCLE']) == TRUE){
+				if($RETURN != NULL){$RETURN .= $VR;}
+				$RETURN .= '<button type="button" class="'.$CSS.' btn-row" onClick="Display_'.$ID.'_Descarte()" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="DESCARTE">'.$CFG_ICONS['RECYCLE'].'</button>';
+				array_push($GLOBALS['TABLE_FUNCTION'],'Display_'.$ID.'_Descarte');
+			}
+			if(array_key_exists('NUBE', $TABLE['HERRAMIENTAS']) && CheckTools($TABLE['HERRAMIENTAS']['NUBE']) == TRUE){
+				if($RETURN != NULL){$RETURN .= $VR;}
+				$RETURN .= '<button type="button" class="'.$CSS.'" onClick="Display_'.$ID.'_Sync()" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="Sincronizar">'.$CFG_ICONS['NUBE'].'</button>';
+				array_push($GLOBALS['TABLE_FUNCTION'],'Display_'.$ID.'_Sync');
+			}
+			if(array_key_exists('CERRAR', $TABLE['HERRAMIENTAS']) && CheckTools($TABLE['HERRAMIENTAS']['CERRAR']) == TRUE){
+				if($RETURN != NULL){$RETURN .= $VR;}
+				$RETURN .= '<button type="button" class="'.$CSS.' btn-row" onClick="Display_'.$ID.'_Cerrar()" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="CERRAR">'.$CFG_ICONS['CERRAR'].'</button>';
+				array_push($GLOBALS['TABLE_FUNCTION'],'Display_'.$ID.'_Cerrar');
+			}
+			if(array_key_exists('DELETE', $TABLE['HERRAMIENTAS']) && CheckTools($TABLE['HERRAMIENTAS']['DELETE']) == TRUE){
+				if($RETURN != NULL){$RETURN .= $VR;}
+				$RETURN .= '<button type="button" class="'.$CSS.' btn-row" onClick="Display_'.$ID.'_Delete()" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="BORRAR">'.$CFG_ICONS['DELETE'].'</button>';
+				array_push($GLOBALS['TABLE_FUNCTION'],'Display_'.$ID.'_Delete');
+			}
+			if(array_key_exists('REVENDEDOR', $TABLE['HERRAMIENTAS']) && CheckTools($TABLE['HERRAMIENTAS']['REVENDEDOR']) == TRUE){
+				if($RETURN != NULL){$RETURN .= $VR;}
+				$RETURN .= '<button type="button" class="'.$CSS.' btn-row" onClick="Display_'.$ID.'_Revendedor()" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="REVENDEDOR">'.$CFG_ICONS['SECRET'].'</button>';
+				array_push($GLOBALS['TABLE_FUNCTION'],'Display_'.$ID.'_Revendedor');
+			}
+			if(array_key_exists('DIRECCIONES', $TABLE['HERRAMIENTAS']) && CheckTools($TABLE['HERRAMIENTAS']['DIRECCIONES']) == TRUE){
+				if($RETURN != NULL){$RETURN .= $VR;}
+				$RETURN .= '<button type="button" class="'.$CSS.' btn-row" onClick="Display_'.$ID.'_Direcciones()" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="DIRECCIONES">'.$CFG_ICONS['HOME'].'</button>';
+				array_push($GLOBALS['TABLE_FUNCTION'],'Display_'.$ID.'_Direcciones');
+			}	
+			if(array_key_exists('LOCK', $TABLE['HERRAMIENTAS']) && CheckTools($TABLE['HERRAMIENTAS']['LOCK']) == TRUE){
+				if($RETURN != NULL){$RETURN .= $VR;}
+				$RETURN .= '<button type="button" class="'.$CSS.' btn-row" onClick="Display_'.$ID.'_Lock()" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="BLOQUEAR/DESBLOQUEAR">'.$CFG_ICONS['LOCK'].'</button>';
+				array_push($GLOBALS['TABLE_FUNCTION'],'Display_'.$ID.'_Lock');
+			}
+			if(array_key_exists('LOCK2', $TABLE['HERRAMIENTAS']) && CheckTools($TABLE['HERRAMIENTAS']['LOCK2']) == TRUE){
+				if($RETURN != NULL){$RETURN .= $VR;}
+				$RETURN .= '<button type="button" class="'.$CSS.' btn-row" onClick="Display_'.$ID.'_Lock()" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="ELIMINAR">'.$CFG_ICONS['TACHITO'].'</button>';
+				array_push($GLOBALS['TABLE_FUNCTION'],'Display_'.$ID.'_Lock');
+			}
+			if(array_key_exists('LOCK3', $TABLE['HERRAMIENTAS']) && CheckTools($TABLE['HERRAMIENTAS']['LOCK3']) == TRUE){
+				if($RETURN != NULL){$RETURN .= $VR;}
+				$RETURN .= '<button type="button" class="'.$CSS.'" onClick="Display_'.$ID.'_Lock()" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="ELIMINAR">'.$CFG_ICONS['TACHITO'].'</button>';
+				array_push($GLOBALS['TABLE_FUNCTION'],'Display_'.$ID.'_Lock');
+			}
+			if(array_key_exists('HISTORIAL', $TABLE['HERRAMIENTAS']) && CheckTools($TABLE['HERRAMIENTAS']['HISTORIAL']) == TRUE){
+				if($RETURN != NULL){$RETURN .= $VR;}
+				$RETURN .= '<button type="button" class="'.$CSS.'" onClick="Display_'.$ID.'_Historial()" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="HISTORIAL">'.$CFG_ICONS['HISTORIAL'].'</button>';
+				array_push($GLOBALS['TABLE_FUNCTION'],'Display_'.$ID.'_Historial');
+			}
+			if(array_key_exists('PRINT', $TABLE['HERRAMIENTAS']) && CheckTools($TABLE['HERRAMIENTAS']['PRINT']) == TRUE){
+				if($RETURN != NULL){$RETURN .= $VR;}
+				$RETURN .= '<button type="button" class="'.$CSS.' btn-row" onClick="Display_'.$ID.'_Print()" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="IMPRIMIR">'.$CFG_ICONS['PRINT'].'</button>';
+				array_push($GLOBALS['TABLE_FUNCTION'],'Display_'.$ID.'_Print');
+			}
+			if(array_key_exists('CSV', $TABLE['HERRAMIENTAS']) && CheckTools($TABLE['HERRAMIENTAS']['CSV']) == TRUE){
+				if($RETURN != NULL){$RETURN .= $VR;}
+				$RETURN .= '<button type="button" class="'.$CSS.' btn-row" onClick="Display_'.$ID.'_Excel()" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="EXPORTAR A EXCEL">'.$CFG_ICONS['CSV'].'</button>';
+				array_push($GLOBALS['TABLE_FUNCTION'],'Display_'.$ID.'_Excel');
+			}
+			if(array_key_exists('VER', $TABLE['HERRAMIENTAS']) && CheckTools($TABLE['HERRAMIENTAS']['VER']) == TRUE){
+				if($RETURN != NULL){$RETURN .= $VR;}
+				$RETURN .= '<button type="button" class="'.$CSS.' btn-row" onClick="Display_'.$ID.'_Ver()" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="VER">'.$CFG_ICONS['VER'].'</button>';
+				array_push($GLOBALS['TABLE_FUNCTION'],'Display_'.$ID.'_Ver');
+			}
+			if(array_key_exists('RECETAS', $TABLE['HERRAMIENTAS']) && CheckTools($TABLE['HERRAMIENTAS']['RECETAS']) == TRUE){
+				if($RETURN != NULL){$RETURN .= $VR;}
+				$RETURN .= '<button type="button" class="'.$CSS.' btn-row" onClick="Display_'.$ID.'_Ver_Receta()" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="VER RECETA">'.$CFG_ICONS['PDF'].'</button>';
+				array_push($GLOBALS['TABLE_FUNCTION'],'Display_'.$ID.'_Ver_Receta');
+			}
+			if(array_key_exists('INFO', $TABLE['HERRAMIENTAS']) && CheckTools($TABLE['HERRAMIENTAS']['INFO']) == TRUE){
+				if($RETURN != NULL){$RETURN .= $VR;}
+				$RETURN .= '<button type="button" class="'.$CSS.' btn-row" onClick="Display_'.$ID.'_Info()" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="INFO">'.$CFG_ICONS['INFO'].'</button>';
+				array_push($GLOBALS['TABLE_FUNCTION'],'Display_'.$ID.'_Info');
+			}
+			if(array_key_exists('CHECKLIST', $TABLE['HERRAMIENTAS']) && CheckTools($TABLE['HERRAMIENTAS']['CHECKLIST']) == TRUE){
+				if($RETURN != NULL){$RETURN .= $VR;}
+				$RETURN .= '<button type="button" class="'.$CSS.' btn-row" onClick="Display_'.$ID.'_CheckList()" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="CHECK LIST">'.$CFG_ICONS['CHECKLIST'].'</button>';
+				array_push($GLOBALS['TABLE_FUNCTION'],'Display_'.$ID.'_CheckList');
+			}
+			if(array_key_exists('SEARCH', $TABLE['HERRAMIENTAS']) && CheckTools($TABLE['HERRAMIENTAS']['SEARCH']) == TRUE){
+				if($RETURN != NULL){$RETURN .= $VR;}
+				$RETURN .= '<button type="button" class="'.$CSS.'" onClick="Display_'.$ID.'_Search()" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="BUSQUEDA AVANZADA">'.$CFG_ICONS['SEARCH_ADV'].'</button>';
+				array_push($GLOBALS['TABLE_FUNCTION'],'Display_'.$ID.'_Search');
+			}
+			if(array_key_exists('QUICK_SEARCH', $TABLE['HERRAMIENTAS']) && CheckTools($TABLE['HERRAMIENTAS']['QUICK_SEARCH']) == TRUE){
+				if($RETURN != NULL){$RETURN .= $VR;}
+				$RETURN .= '<button type="button" class="'.$CSS.'" onClick="Display_'.$ID.'_QuickSearch()" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="BUSCAR">'.$CFG_ICONS['SEARCH'].'</button>';
+				array_push($GLOBALS['TABLE_FUNCTION'],'Display_'.$ID.'_QuickSearch');
+				ModalQuickSearch($ID, $TABLE);
+			}
+			if(array_key_exists('REFRESH', $TABLE['HERRAMIENTAS']) && CheckTools($TABLE['HERRAMIENTAS']['REFRESH']) == TRUE){
+				if($RETURN != NULL){$RETURN .= $VR;}
+				$RETURN .= '<button type="button" class="'.$CSS.'" onClick="TableRefresh(\''.$ID.'\')" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="ACTUALIZAR">'.$CFG_ICONS['REFRESH'].'</button>';
+			}				
+			if($MAIN == FALSE){
+				if($RETURN != NULL){$RETURN .= $VR;}
+				$RETURN .= '<button type="button" class="btn btn-outline-danger btn-sm me-1" onClick="ModalClose(this)" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="CERRAR">'.$CFG_ICONS['CLOSE'].'</button>';
+			}					
+		}
+	}
+	$RETURN .= '<span id="Table_'.$ID.'_Pagination_MD"></span>';
+	return $RETURN;		
+}
+	
+function ModalQuickSearch($K_TABLE, $V_TABLE){
+	global $CFG_ICONS;
+	$BODY_HTML = '<input type="hidden" id="AUTOFOCUS" value="'.$K_TABLE.'_QUICKSEARCH"><form id="'.$K_TABLE.'_QUICKSEARCH_FORM"><div class="form-floating mb-3"><input type="text" class="form-control text-uppercase FormEnter" id="'.$K_TABLE.'_QUICKSEARCH" placeholder="Busqueda Rapida" autofocus required  autocomplete="off"><label for="'.$K_TABLE.'_QUICKSEARCH">'.$V_TABLE['QUICK_SEARCH'].'</label></div></form>';
+	$FOOTER['SUBMIT'] 	= array('ID' => 'Buscar');
+	$FOOTER['RESET'] 	= array('ID' => 'Limpiar', 'ACTION' => 'MODAL_'.$K_TABLE.'_QUICKSEARCH_Reset');
+	$FOOTER['CLOSE']	= array('ID' => 'Cerrar');	
+	$MODAL['ID']		= $K_TABLE.'_QUICKSEARCH';
+	$MODAL['SIZE']		= '';
+	$MODAL['TITLE']		= 'Buscador';
+	array_push($GLOBALS['MODALS'],CreateModal($MODAL, $BODY_HTML, $FOOTER));
+	array_push($GLOBALS['VARS'],"const MODAL_".$K_TABLE."_QUICKSEARCH_INSTANCE = bootstrap.Modal.getOrCreateInstance('#MODAL_".$K_TABLE."_QUICKSEARCH');");
+	array_push($GLOBALS['VARS'],"const MODAL_".$K_TABLE."_QUICKSEARCH = document.getElementById('MODAL_".$K_TABLE."_QUICKSEARCH');");
+	array_push($GLOBALS['VARS'],"var MODAL_RETURN_".$K_TABLE." = null;");
+	
+
+	$TMP = "function Display_".$K_TABLE."_QuickSearch(){";
+		$TMP .= "MODAL_RETURN_".$K_TABLE." = ModalHasShow();";
+		$TMP .= "if(MODAL_RETURN_".$K_TABLE." != null){ModalReturn(MODAL_RETURN_".$K_TABLE.");$('#MODAL_".$K_TABLE."_QUICKSEARCH').find('.btn-closer').attr('onClick','ModalClose(this, MODAL_RETURN_".$K_TABLE.")')}";
+		$TMP .= "MODAL_".$K_TABLE."_QUICKSEARCH_INSTANCE.show();";
+		$TMP .= '$("#'.$K_TABLE.'_QUICKSEARCH").focus();';
+		
+	$TMP .= '}';
+	array_push($GLOBALS['FUNCTIONS'],$TMP);
+	unset($TMP);
+	$TMP = 'function MODAL_'.$K_TABLE.'_QUICKSEARCH_Procesar(){';
+		$TMP .= 'if($("#'.$K_TABLE.'_QUICKSEARCH_FORM")[0].reportValidity()==false){return;}';
+		$TMP .= 'FormErrorReset("'.$K_TABLE.'_QUICKSEARCH_FORM");';
+		$TMP .= 'let SEARCH = $("#'.$K_TABLE.'_QUICKSEARCH").val();';
+		$TMP .= '$("#Table_'.$K_TABLE.'_search").val(SEARCH);';
+		$TMP .= '$("#Table_'.$K_TABLE.'_page").val(1);';
+		$TMP .=  'TableLoad("'.$K_TABLE.'");';
+		$TMP .= '$("#Table_'.$K_TABLE.'_Tools").find(\'button[onclick="Display_'.$K_TABLE.'_QuickSearch()"]\').html(\''.$CFG_ICONS['SEARCH_DROP'].'\');';
+		$TMP .=  'TableLoad("'.$K_TABLE.'");';		
+		$TMP .= 'MODAL_'.$K_TABLE.'_QUICKSEARCH_INSTANCE.hide();';
+		$TMP .= "ModalReturn(MODAL_RETURN_".$K_TABLE.", 'SHOW');";
+	$TMP .= '}';
+	array_push($GLOBALS['FUNCTIONS'],$TMP);
+	unset($TMP);
+	$TMP = 'function MODAL_'.$K_TABLE.'_QUICKSEARCH_Reset(){';
+		$TMP .= '$("#'.$K_TABLE.'_QUICKSEARCH").val("");';
+		$TMP .= '$("#Table_'.$K_TABLE.'_search").val("");';
+		$TMP .= '$("#Table_'.$K_TABLE.'_Tools").find(\'button[onclick="Display_'.$K_TABLE.'_QuickSearch()"]\').html(\''.$CFG_ICONS['SEARCH'].'\');';
+		$TMP .=  'TableLoad("'.$K_TABLE.'");';
+		$TMP .= 'MODAL_'.$K_TABLE.'_QUICKSEARCH_INSTANCE.hide();';
+		$TMP .= "ModalReturn(MODAL_RETURN_".$K_TABLE.", 'SHOW');";
+	$TMP .= '}';
+	array_push($GLOBALS['FUNCTIONS'],$TMP);
+	unset($TMP);
+}
+
+function SF($METHOD, $MSG = NULL){
+	if($METHOD == 'SIN_CAMBIOS'){
+		return 'swal.fire({icon: "warning",text: "No se detectaron cambios en el formulario!"});';
+	}elseif($METHOD == 'OK'){
+		if($MSG != NULL){return 'swal.fire({icon: "success",text: '.$MSG.'});';}
+		else{return 'swal.fire({icon: "success",text: "La operacion fue procesada de forma correcta!"});';}
+	}elseif($METHOD == 'MSG'){
+		return 'swal.fire({icon: "error",text: '.$MSG.'});';
+	}else{
+		return 'swal.fire({icon: "error",text: "No se pudo procesar la operacion!"});';
+	}
+}
+
+function SF_Lock($TABLE, $DATA){
+	if(!array_key_exists('SEND', $DATA) || !array_key_exists('TARGET_CHECK', $DATA) || !array_key_exists('RESPONSE_ID', $DATA) || !array_key_exists('RESPONSE_STATUS', $DATA) || !array_key_exists('RESPONSE_MESSAGE', $DATA) || !array_key_exists('TARGET_SUBMIT', $DATA)){return '';}
+	$TMP = "function Display_".$TABLE."_Lock(){";
+		$TMP .= "let formData = {'".$DATA['SEND']."': $('#Table_".$TABLE."_row').val()};";
+		$TMP .= "$.ajax({url: '".$DATA['TARGET_CHECK']."',data: JSON.stringify(formData)}).done(function (response){";
+			if($DATA['RESPONSE_STATUS'] != ''){
+			$TMP .= "if(response.".$DATA['RESPONSE_ID']." != 0 && response.DISPONIBLE == ".$DATA['RESPONSE_STATUS']."){";
+			}else{
+			$TMP .= "if(response.".$DATA['RESPONSE_ID']." != 0){";	
+			}
+				$TMP .= "Swal.fire({";
+					$TMP .= "icon: 'warning',";
+					$TMP .= "text: '¿Estas a punto de ".$DATA['RESPONSE_MESSAGE']." + '?',";
+					$TMP .= "showCancelButton: true,";
+					$TMP .= "confirmButtonText: 'Confirmar',";
+					$TMP .= "cancelButtonText: 'Cancelar'";
+				$TMP .= "}).then((result) => {";
+					$TMP .= "if (result.isConfirmed) {";
+						$TMP .= "$.ajax({url: ".$DATA['TARGET_SUBMIT'].",data: JSON.stringify(".$DATA['TARGET_SUBMIT_DATA'].")}).done(function (response2){";
+							$TMP .= "TableRowClick('".$TABLE."','');";
+							$TMP .= "if(response2.RESULTADO == 'OK'){";
+								$TMP .= "TableLoad('".$TABLE."');";
+								$TMP .= 'MODAL_'.$TABLE.'_QUICKSEARCH_Reset();';
+								$TMP .= SF('OK');
+							$TMP .= "}else{";
+								$TMP .= 'if(response2.MESSAGE != ""){'.SF('MSG', 'response2.MESSAGE').'}';
+								$TMP .= 'else{'.SF('ERROR').'}';
+							$TMP .= "}";
+						$TMP .= "});";
+					$TMP .= "}";
+				$TMP .= "})";
+			$TMP .= "}else{";
+				$TMP .= SF('ERROR');
+			$TMP .= "}";
+		$TMP .= "});";
+	$TMP .= "}";
+	return $TMP;
+}
+
+/*function ModalQuickSearchFil('A', $TABLE['A']){
+function ModalQuickSearchFil($K_TABLE, $V_TABLE){
+	global $CFG_ICONS;
+	$BODY_HTML = '<input type="hidden" id="AUTOFOCUS" value="'.$K_TABLE.'1_QUICKSEARCH">';
+	$BODY_HTML .='<form id="'.$K_TABLE.'_QUICKSEARCH_FORM">';
+		$BODY_HTML .='	<div class="form-floating mb-3">';
+			/*<input type="text" class="form-control text-uppercase FormEnter" id="'.$K_TABLE.'1_QUICKSEARCH" placeholder="Busqueda Rapida" autofocus autocomplete="off">
+			<label for="'.$K_TABLE.'1_QUICKSEARCH">'.$V_TABLE['QUICK_SEARCH'].'</label><br>
+			<input type="text" class="form-control text-uppercase FormEnter" id="'.$K_TABLE.'_QUICKSEARCH" placeholder="Busqueda Rapida" autocomplete="off">
+			<label for="'.$K_TABLE.'_QUICKSEARCH">'.$V_TABLE['QUICK_SEARCH'].'</label><br>
+			<input type="text" class="form-control text-uppercase FormEnter" id="'.$K_TABLE.'_QUICKSEARCH" placeholder="Busqueda Rapida" autocomplete="off">
+			<label for="'.$K_TABLE.'_QUICKSEARCH">'.$V_TABLE['QUICK_SEARCH'].'</label>
+			
+			$busqueda = explode("/", $V_TABLE['QUICK_SEARCH']);
+			foreach($busqueda as $k => $B){
+				$BODY_HTML .= CreateFormInput(array('ID' => $K.'_1_QUICKSEARCH', 'TIPO' => 'text', 'VALIDATE' => 'CTS', 'LABEL' => $B));
+			}
+		$BODY_HTML .='</div>';
+	$BODY_HTML .='</form>';
+	
+	
+	$FOOTER['SUBMIT'] 	= array('ID' => 'Buscar');
+	$FOOTER['RESET'] 	= array('ID' => 'Limpiar', 'ACTION' => 'MODAL_'.$K_TABLE.'_QUICKSEARCH_Reset');
+	$FOOTER['CLOSE']	= array('ID' => 'Cerrar');	
+	$MODAL['ID']		= $K_TABLE.'_QUICKSEARCH';
+	$MODAL['SIZE']		= '';
+	$MODAL['TITLE']		= 'Buscador';
+	array_push($GLOBALS['MODALS'],CreateModal($MODAL, $BODY_HTML, $FOOTER));
+	array_push($GLOBALS['VARS'],"const MODAL_".$K_TABLE."_QUICKSEARCH_INSTANCE = bootstrap.Modal.getOrCreateInstance('#MODAL_".$K_TABLE."_QUICKSEARCH');");
+	array_push($GLOBALS['VARS'],"const MODAL_".$K_TABLE."_QUICKSEARCH = document.getElementById('MODAL_".$K_TABLE."_QUICKSEARCH');");
+	array_push($GLOBALS['VARS'],"var MODAL_RETURN_".$K_TABLE." = null;");
+	
+
+	$TMP = "function Display_".$K_TABLE."_QuickSearch(){";
+		$TMP .= "MODAL_RETURN_".$K_TABLE." = ModalHasShow();";
+		$TMP .= "if(MODAL_RETURN_".$K_TABLE." != null){ModalReturn(MODAL_RETURN_".$K_TABLE.");$('#MODAL_".$K_TABLE."_QUICKSEARCH').find('.btn-closer').attr('onClick','ModalClose(this, MODAL_RETURN_".$K_TABLE.")')}";
+		$TMP .= "MODAL_".$K_TABLE."_QUICKSEARCH_INSTANCE.show();";
+		$TMP .= '$("#'.$K_TABLE.'_QUICKSEARCH").focus();';
+		
+	$TMP .= '}';
+	array_push($GLOBALS['FUNCTIONS'],$TMP);
+	unset($TMP);
+	$TMP = 'function MODAL_'.$K_TABLE.'_QUICKSEARCH_Procesar(){';
+		$TMP .= 'if($("#'.$K_TABLE.'_QUICKSEARCH_FORM")[0].reportValidity()==false){return;}';
+		$TMP .= 'FormErrorReset("'.$K_TABLE.'_QUICKSEARCH_FORM");';
+		$TMP .= 'let SEARCH = $("#'.$K_TABLE.'_QUICKSEARCH").val();';
+		$TMP .= '$("#Table_'.$K_TABLE.'_search").val(SEARCH);';
+		$TMP .= '$("#Table_'.$K_TABLE.'_page").val(1);';
+		$TMP .=  'TableLoad("'.$K_TABLE.'");';
+		$TMP .= '$("#Table_'.$K_TABLE.'_Tools").find(\'button[onclick="Display_'.$K_TABLE.'_QuickSearch()"]\').html(\''.$CFG_ICONS['SEARCH_DROP'].'\');';
+		$TMP .=  'TableLoad("'.$K_TABLE.'");';		
+		$TMP .= 'MODAL_'.$K_TABLE.'_QUICKSEARCH_INSTANCE.hide();';
+		$TMP .= "ModalReturn(MODAL_RETURN_".$K_TABLE.", 'SHOW');";
+	$TMP .= '}';
+	array_push($GLOBALS['FUNCTIONS'],$TMP);
+	unset($TMP);
+	$TMP = 'function MODAL_'.$K_TABLE.'_QUICKSEARCH_Reset(){';
+		$TMP .= '$("#'.$K_TABLE.'_QUICKSEARCH").val("");';
+		$TMP .= '$("#Table_'.$K_TABLE.'_search").val("");';
+		$TMP .= '$("#Table_'.$K_TABLE.'_Tools").find(\'button[onclick="Display_'.$K_TABLE.'_QuickSearch()"]\').html(\''.$CFG_ICONS['SEARCH'].'\');';
+		$TMP .=  'TableLoad("'.$K_TABLE.'");';
+		$TMP .= 'MODAL_'.$K_TABLE.'_QUICKSEARCH_INSTANCE.hide();';
+		$TMP .= "ModalReturn(MODAL_RETURN_".$K_TABLE.", 'SHOW');";
+	$TMP .= '}';
+	array_push($GLOBALS['FUNCTIONS'],$TMP);
+	unset($TMP);
+}
+*/
+?>
