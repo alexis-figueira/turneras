@@ -73,16 +73,21 @@ $TMP['BODY'] = '<div class="card border-dark mx-auto mt-4 mb-0" style="width: 98
 			$TMP['BODY'] .= '<div class="tab-content subtabs-body">';			
 				$TMP['BODY'] .= '<div class="tab-pane fade" role="tabpanel" aria-labelledby="FICHA" tabindex="1">';
 					$SUBTABLE_FICHA['COLUMNAS']			= array(
-						array('COLUMNA' => 'Afiliacion'),
+						array('COLUMNA' => 'Paciente'),
+						array('COLUMNA' => 'Inicio'),
+						array('COLUMNA' => 'Fin'),
+						array('COLUMNA' => 'Estado'),
+						/* array('COLUMNA' => 'Afiliacion'),
 						array('COLUMNA' => 'Afiliado'),
 						array('COLUMNA' => 'DNI'),
 						array('COLUMNA' => 'Agenda'),
 						array('COLUMNA' => 'Hora'),
 						array('COLUMNA' => 'Turno'),
-						array('COLUMNA' => 'persona', 'DISPLAY' => 'NONE')
+						array('COLUMNA' => 'persona', 'DISPLAY' => 'NONE') */
 					);
-					$SUBTABLE_FICHA['AJAX_URL'] 		= $LINK_BACK.'/Listado_TurnosFechaDas';
+					$SUBTABLE_FICHA['AJAX_URL'] 		= $LINK_BACK.'/Listado_Turnos_Dia';
 					$SUBTABLE_FICHA['HERRAMIENTAS_NEW'] 	= array(
+						array('TITLE' => 'DAR TURNO', 'ICON' => '<i class="fa-solid fa-plus fa-lg"></i>', 'FN' => 'Display_Alta', 'CLICK' => 'Display_Alta()', 'PERMISOS' => 'C', 'ROW_SELECTED' => FALSE),
 						array('TITLE' => 'IMPRIMIR', 'ICON' => '<i class="fa-solid fa-print fa-lg"></i>', 'FN' => NULL, 'CLICK' => 'TablePrint(\'FICHA\')', 'PERMISOS' => 'C', 'ROW_SELECTED' => FALSE),
 						array('TITLE' => 'ACTUALIZAR', 'ICON' => '<i class="fa-solid fa-rotate fa-lg"></i>', 'FN' => NULL, 'CLICK' => 'TableRefresh(\'FICHA\')', 'PERMISOS' => 'C', 'ROW_SELECTED' => FALSE),
 					); 
@@ -100,7 +105,7 @@ array_push($VARS,"const MODAL_".$TMP['MODAL']['ID']." = document.getElementById(
 unset($JS_TMP);
 
 $JS_TMP = 'async function Display_Ver_Fecha(){';
-	$JS_TMP .= '$("#Table_FICHA_advanced").val(JSON.stringify({CET_ID_CATEGORIA: $("#CALENDARIO_FORM #ID_CATEGORIA").val(), CTS_PROFESIONAL: $("#CALENDARIO_FORM #PROFESIONAL").val(), CFA_FECHA: $("#CALENDARIO_FORM #FECHA").val()}));';
+	$JS_TMP .= '$("#Table_FICHA_advanced").val(JSON.stringify({CFA_FECHA: $("#CALENDARIO_FORM #FECHA").val()}));';
 	$JS_TMP .= 'TableLoad("FICHA");';
 	$JS_TMP .= 'MODAL_TURNOS_INSTANCE.show();';
 $JS_TMP .= '}';
@@ -122,7 +127,7 @@ $JS_TMP = 'async function Procesar_Periodo(method){';
 $JS_TMP .= '}';
 
 $JS_TMP .= 'async function Procesar_A_Ver(){';
-	$JS_TMP .= 'const response = await $.ajax({ url: "'.$LINK_BACK.'/Ver_Calendario3/", data: JSON.stringify( await FormDataPicker("CALENDARIO_FORM"))});';
+	$JS_TMP .= 'const response = await $.ajax({ url: "'.$LINK_BACK.'/Ver_Calendario/", data: JSON.stringify( await FormDataPicker("CALENDARIO_FORM"))});';
 	$JS_TMP .= '$("#DISPLAY_PERIODO").text(response.DISPLAY_PERIODO);';
 	
 	$JS_TMP .= '$("#TurneraCalendarBody").empty();';
@@ -165,7 +170,68 @@ $JS_TMP .= '$(document).off("click","#TurneraCalendarBody td").on("click", "#Tur
 $JS_TMP .= '});';
 array_push($FUNCTIONS,$JS_TMP);
 
-$JS_TMP .= '$(document).ready(function(){';
+if(in_array('Display_Alta', $TABLE_FUNCTION)){
+	unset($TMP);
+	$TMP['MODAL']['ID']			= 'ALTA';
+	$TMP['MODAL']['TITLE']		= 'Turnos';
+	$TMP['MODAL']['SIZE']		= 'LG';
+	
+	$TMP['FOOTER']['SUBMIT'] 	= array('ID' => 'Guardar');
+	$TMP['FOOTER']['CLOSE']		= array('ID' => 'Cerrar');
+	
+	$TMP['BODY'] = '<input type="hidden" id="AUTOFOCUS">';
+	$TMP['BODY'] .= '<form id="'.$TMP['MODAL']['ID'].'_FORM" autocomplete="off">';
+		$TMP['BODY'] .= CreateFormInput(array('ID' => 'fecha_turno', 'TIPO' => 'hidden', 'VALIDATE' => 'CFA', 'REQUIRED' => TRUE));
+		$TMP['BODY'] .= '<div class="row">';
+			$TMP['BODY'] .= '<div class="col-12 col-lg-6">';
+				$TMP['BODY'] .= CreateFormInput(array('ID' => 'id_paciente', 'TIPO' => 'select2', 'VALIDATE' => 'CEI', 'REQUIRED' => TRUE, 'LOWERCASE' => TRUE));
+			$TMP['BODY'] .= '</div>';	
+			$TMP['BODY'] .= '<div class="col-12 col-lg-2">';
+				$TMP['BODY'] .= CreateFormInput(array('ID' => 'valor', 		'TIPO' => 'number', 	'VALIDATE' => 'CEI', 	'REQUIRED' => TRUE,	'LABEL' => '$ Sesion',	'DECIMAL' => FALSE, 'MIN' => 0));
+			$TMP['BODY'] .= '</div>';
+			$TMP['BODY'] .= '<div class="col-6 col-lg-2">';
+				$TMP['BODY'] .= CreateFormInput(array('ID' => 'hora_inicio', 'TIPO' => 'time', 'VALIDATE' => 'CHA', 'REQUIRED' => TRUE, 'LABEL' => 'Inicio'));
+			$TMP['BODY'] .= '</div>';
+			$TMP['BODY'] .= '<div class="col-6 col-lg-2">';
+				$TMP['BODY'] .= CreateFormInput(array('ID' => 'hora_final', 'TIPO' => 'time', 'VALIDATE' => 'CHA', 'REQUIRED' => TRUE, 'LABEL' => 'final'));
+			$TMP['BODY'] .= '</div>';				
+		$TMP['BODY'] .= '</div>';
+	$TMP['BODY'] .= '</form>';
+	
+	array_push($MODALS,CreateModal($TMP['MODAL'], $TMP['BODY'], $TMP['FOOTER']));
+	array_push($VARS,"const MODAL_".$TMP['MODAL']['ID']."_INSTANCE = bootstrap.Modal.getOrCreateInstance('#MODAL_".$TMP['MODAL']['ID']."');");
+	array_push($VARS,"const MODAL_".$TMP['MODAL']['ID']." = document.getElementById('MODAL_".$TMP['MODAL']['ID']."');");	
+	unset($JS_TMP);
+	
+	$JS_TMP = 'async function Display_Alta(){';
+		// $JS_TMP .= 'if($("#Table_A_row").val() < 1){ return; }';
+		$JS_TMP .= 'FormErrorReset("ALTA_FORM");';
+		$JS_TMP .= 'FormReset("ALTA_FORM");';
+		$JS_TMP .= 'inicializarSelect2("#ID_PACIENTE", "#MODAL_ALTA", "'.$LINK_BACK.'/DL_Pacientes", "Pacientes", 2);';
+		$JS_TMP .= '$("#ALTA_FORM #FECHA_TURNO").val($("#CALENDARIO_FORM #FECHA").val());';
+		$JS_TMP .= '$("#MODAL_ALTA #AUTOFOCUS").val("PACIENTE");';
+		// $JS_TMP .= 'Procesar_A_Ver();';
+		$JS_TMP .= 'MODAL_ALTA_INSTANCE.show();';
+	$JS_TMP .= '}';
+	
+	$JS_TMP .= 'async function MODAL_ALTA_Procesar(){';
+		$JS_TMP .= 'if($("#ALTA_FORM")[0].reportValidity()==false){return;}';
+		$JS_TMP .= 'const response = await $.ajax({url: "'.$LINK_BACK.'/Procesar_Turno/",data: JSON.stringify(await FormDataPicker("ALTA_FORM"))});';
+		$JS_TMP .= 'if(response.RESULTADO == "OK"){';
+			$JS_TMP .= 'await TableLoad("FICHA", response.MESSAGE);';
+			$JS_TMP .= 'MODAL_ALTA_INSTANCE.hide();';
+			$JS_TMP .= SF('OK');
+		$JS_TMP .= '}else{';
+			$JS_TMP .= 'if(response.MESSAGE != ""){'.SF('MSG', 'response.MESSAGE').'}';
+			$JS_TMP .= 'else{'.SF('ERROR').'}';
+		$JS_TMP .= '}';		
+	$JS_TMP .= '}';
+	array_push($FUNCTIONS,$JS_TMP);
+}
+
+
+unset($JS_TMP);
+$JS_TMP = '$(document).ready(function(){';
 	$JS_TMP .= 'Procesar_A_Ver();';	
 $JS_TMP .= '});';
 array_push($FUNCTIONS,$JS_TMP);

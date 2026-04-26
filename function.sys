@@ -1,0 +1,341 @@
+<?php
+function Captcha($TOKEN, $ACTION){
+	$ch = curl_init();
+	curl_setopt($ch, CURLOPT_URL,"https://www.google.com/recaptcha/api/siteverify");
+	curl_setopt($ch, CURLOPT_POST, 1);
+	curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query(array('secret' => $GLOBALS['RECATPCHA_PRIVATE'], 'response' => $TOKEN)));
+	curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+	curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+	$response = curl_exec($ch);
+	curl_close($ch);
+	$arrResponse = json_decode($response, true);
+	if($arrResponse["success"] == 1 && $arrResponse["action"] == $ACTION && $arrResponse["score"] >= 0.5) {
+		return TRUE;	
+	}else{
+		return FALSE;
+	}
+}
+
+function ClientIP(){
+	if(!empty($GLOBALS['sH']['HTTP_CLIENT_IP'])){
+		return $GLOBALS['sH']['HTTP_CLIENT_IP'];
+	}elseif (!empty($GLOBALS['sH']['HTTP_X_FORWARDED_FOR'])){
+		return $GLOBALS['sH']['HTTP_X_FORWARDED_FOR'];
+	}else{
+		return $GLOBALS['sH']['REMOTE_ADDR'];
+	}
+}
+
+function CodeRandom($LARGO, $TIPO = 'ALFANUMERICO'){
+	$LARGO = (int)$LARGO;
+	if(!is_int($LARGO) || $LARGO < 1 || $LARGO > 999){ $LARGO = 10;}
+	if($TIPO == 'NUMEROS'){$CADENA = $GLOBALS['CFG_VALIDACION']['NUMEROS'];}
+	elseif($TIPO == 'LETRAS'){$CADENA = Str_Lo($GLOBALS['CFG_VALIDACION']['LETRAS']).Str_Up($GLOBALS['CFG_VALIDACION']['LETRAS']);}
+	else{$CADENA = $GLOBALS['CFG_VALIDACION']['NUMEROS'].Str_Lo($GLOBALS['CFG_VALIDACION']['LETRAS']).Str_Up($GLOBALS['CFG_VALIDACION']['LETRAS']);}
+
+	return substr(str_shuffle($CADENA), 0, $LARGO);
+}
+
+function Cookie($NOMBRE, $VALOR, $LIFETIME = NULL){
+	
+	if($LIFETIME == NULL){
+		$LIFETIME = $GLOBALS['CFG_COOKIES']['LIFETIME'];
+	}
+	setcookie($NOMBRE, $VALOR, [
+		'expires'   => $LIFETIME,
+		'path'      => $GLOBALS['CFG_COOKIES']['PATH'],
+		'domain'    => $GLOBALS['CFG_COOKIES']['DOMAIN'],
+		'secure'    => $GLOBALS['CFG_COOKIES']['SECURE'],
+		'httponly'  => $GLOBALS['CFG_COOKIES']['HTTPONLY'],
+		'samesite'  => $GLOBALS['CFG_COOKIES']['SAMESITE'],
+	]);
+}
+
+// function Fecha_Agregar($FECHA, $CANT, $UNIT, $FORMATO = "Y-m-d H:i:s"){   
+	// if(SANITIZE_DATE($FECHA, $FORMATO) == ''){
+		// return '';		
+	// }else{ 
+		// if($UNIT == 'meses'){return date($FORMATO, strtotime($FECHA." +".$CANT." month"));}
+		// elseif($UNIT == 'dias'){return date($FORMATO, strtotime($FECHA." +".$CANT." days"));}
+		// else{return '';}
+	// }
+// }
+
+function Hora_Formato(string $FECHA, string $FORMATO = "HH:II"):string{
+	if (!preg_match('/^(?<hh>[01]\d|2[0-3]):(?<ii>[0-5]\d):(?<ss>[0-5]\d)$/', $FECHA, $matches)) {
+        return '';
+    }
+    $hh = $matches['hh'];
+    $ii = $matches['ii'];
+    $ss = $matches['ss'];
+    $resultado = str_replace(["HH", "II", "SS"], [$hh, $ii, $ss], strtoupper($FORMATO));
+    return $resultado;
+}
+
+function Fecha_Agregar($FECHA, $CANT, $UNIT, $FORMATO = "Y-m-d H:i:s"){   
+	if(SANITIZE_DATE($FECHA, $FORMATO) == ''){
+		return '';		
+	}else{ 
+		if($UNIT == 'meses'){return date($FORMATO, strtotime($FECHA." +".$CANT." month"));}
+		elseif($UNIT == 'dias'){return date($FORMATO, strtotime($FECHA." +".$CANT." days"));}
+		elseif($UNIT == 'segundos'){return date($FORMATO, strtotime($FECHA." +".$CANT." seconds"));}
+		else{return '';}
+	}
+}
+
+function Fecha_Formato($FECHA, $FORMATO = "d-m-Y"){
+	if($FECHA != ''){
+		return date($FORMATO, strtotime($FECHA));
+	}else{
+		return;
+	}
+}
+
+function Fecha_Formato2DB($FECHA, $FORMATO = "d-m-Y", $TYPE = "DATE"){
+	$date = DateTime::createFromFormat($FORMATO, $FECHA);
+	if($TYPE == 'DATETIME'){
+		return $date->format('Y-m-d H:i:s');
+	}else{
+		return $date->format('Y-m-d');
+	}
+}
+
+use Com\Tecnick\Barcode\Barcode;
+function Generar_Qr($dato,$fondo="white",$logo=true,$color="#333") {
+	// instantiate the barcode class
+	$barcode = new \Com\Tecnick\Barcode\Barcode();
+
+	// generate a barcode
+	$bobj = $barcode->getBarcodeObj(
+		'QRCODE,H,NL,7',                // barcode type and additional comma-separated parameters
+		$dato,                          // data string to encode
+		-5,                             // bar width (use absolute or negative value as multiplication factor)
+		-5,                             // bar height (use absolute or negative value as multiplication factor)
+		$color,                        // foreground color
+		array(-1, -1, -1, -1)               // padding (use absolute or negative values as multiplication factors)
+		)->setBackgroundColor($fondo); // background color
+
+	$imagen = $bobj->getPngData();
+	if($logo){$imagen = Generar_Qr_Logo($imagen);}
+	
+	return $imagen;	
+}
+
+function Generar_Qr_Logo($qr, $logo = null){
+	$logo = $GLOBALS['sH']['DOCUMENT_ROOT'].'/public/custom-img/QR_DAS.jpg';
+	$escala = 2;
+	$QR = imagecreatefromstring($qr);	
+	$logo = imagecreatefromstring(file_get_contents($logo));	
+	imageAlphaBlending($QR, false);
+	imageSaveAlpha($QR, true);	
+	imageAlphaBlending($logo, false);
+	imageSaveAlpha($logo, true);
+	$QR_width = imagesx($QR);
+	$QR_height = imagesy($QR);
+	$logo_width = imagesx($logo);
+	$logo_height = imagesy($logo);
+	
+	// Scale logo to fit in the QR Code
+	$logo_qr_width = $QR_width/$escala;
+	$scale = $logo_width/$logo_qr_width;
+	$logo_qr_height = $logo_height/$scale;
+	
+	$logo_pos_H = ($QR_height - $logo_qr_height)/2;
+	$logo_pos_W = ($QR_width - $logo_qr_width)/2;
+
+	imagecopyresampled($QR, $logo, (int)$logo_pos_W, (int)$logo_pos_H, 0, 0, (int)$logo_qr_width, (int)$logo_qr_height, (int)$logo_width, (int)$logo_height);	
+	ob_start();
+	imagepng($QR);
+	$blob = ob_get_contents();
+	ob_end_clean();	
+	imagedestroy($QR);
+	return $blob;
+}
+
+function isValidMd5($md5) {
+    return preg_match('/^[a-f0-9]{32}$/', $md5);
+}
+
+function Numero_Formato($NUMERO, $DECIMALES = "2"){
+	return number_format((float)$NUMERO,$DECIMALES,',','.');
+}
+
+function QueryValue($value) {
+    return $value !== null ? "'".$value."'" : "NULL";
+}
+
+//RETURN FILE PATH
+function Return_File_Path($METHOD, $TARGET = '', $SEARCH = FALSE){	
+	if($METHOD == 'UPLOADS'){ 			$FOLDER = $GLOBALS['sH']['DOCUMENT_ROOT'].$GLOBALS['SYS_FOLDER']['ARCHIVOS'].'upload/';				}
+	elseif($METHOD == 'RECETAS'){ 		$FOLDER = $GLOBALS['sH']['DOCUMENT_ROOT'].$GLOBALS['SYS_FOLDER']['ARCHIVOS'].'recetas/';			}
+	// elseif($METHOD == 'PADRON_AFI'){ 	$FOLDER = $GLOBALS['sH']['DOCUMENT_ROOT'].$GLOBALS['SYS_FOLDER']['ARCHIVOS'].'padron/afiliados/';	}
+	elseif($METHOD == 'TEMP'){ 			$FOLDER = $GLOBALS['sH']['DOCUMENT_ROOT'].$GLOBALS['SYS_FOLDER']['ARCHIVOS'].'temp/';				}
+	elseif($METHOD == 'SQL'){ 			$FOLDER = $GLOBALS['sH']['DOCUMENT_ROOT'].$GLOBALS['SYS_FOLDER']['SQL'].date("Y-m").'/';			}
+	else{ return; }
+	// ARMA EL PATH COMPLETO
+	$FOLDER = rtrim($FOLDER, '/') . '/' . ltrim($TARGET, '/');
+	if(Str_Up(substr(PHP_OS, 0, 3)) == 'WIN'){
+		$FOLDER = str_replace('\\', '/', $FOLDER);
+	}
+	$FOLDER = preg_replace('#/+#', '/', $FOLDER);
+	$FOLDER = realpath($FOLDER) !== false ? realpath($FOLDER) : $FOLDER;
+	if($SEARCH == FALSE){		
+		$dirFOLDER = dirname($FOLDER);
+		if(!file_exists($dirFOLDER)){mkdir($dirFOLDER, 0775, true);}
+	}
+	return $FOLDER;
+}
+
+require_once "../vendor/autoload.php";
+
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception;
+use PHPMailer\PHPMailer\SMTP;
+function Send_Mail($DESTINATARIOS,$ASUNTO,$MENSAJE,$ADJUNTOS='', $ALT_MENSAJE=""){	
+	if (!is_array($DESTINATARIOS)){return;}
+	$mail = new PHPMailer(true);
+	$mail->setLanguage('es');
+	$mail->isSMTP();
+	$mail->CharSet = 'UTF-8';
+	$mail->SMTPDebug = SMTP::DEBUG_OFF;
+	// $mail->SMTPDebug = SMTP::DEBUG_SERVER;
+	// $mail->Debugoutput = 'html';
+	
+	$mail->Helo = $GLOBALS['sH']['HTTP_HOST']; //Muy importante para que llegue a hotmail y otros
+	$mail->Hostname = $GLOBALS['sH']['HTTP_HOST'];
+	$mail->Host = $GLOBALS['SMTP_MAIL']['HOST'];
+	$mail->Port = $GLOBALS['SMTP_MAIL']['PORT'];
+	$mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+	$mail->SMTPAuth = true;
+	$mail->Username = $GLOBALS['SMTP_MAIL']['CUENTA'];
+	$mail->Password = $GLOBALS['SMTP_MAIL']['PASSWORD'];
+	$mail->setFrom($GLOBALS['SMTP_MAIL']['FROM'], $GLOBALS['SMTP_MAIL']['NOMBRE']);
+	$mail->SMTPOptions['ssl']['peer_name']='smtp.hostinger.com';
+	
+	
+	foreach($DESTINATARIOS as $KEY => $VALUE){
+		if($GLOBALS['URL']['SYS'] == 'http://localhost/psicologia/public_html/v1/'){
+			$mail->AddAddress('alexis.figueira@hotmail.com','Soy Tester');
+		}else{
+			$mail->AddAddress($VALUE['CORREO'],$VALUE['NOMBRE']);
+		}
+	}
+	$mail->Subject = $ASUNTO;
+	$mail->msgHTML($MENSAJE, __DIR__);		
+	$mail->AltBody = $ALT_MENSAJE;
+	if($ADJUNTOS!=''){
+		foreach($ADJUNTOS as $KEY => $VALUE){
+			if(is_array($VALUE) && array_key_exists('CORREO', $VALUE) && array_key_exists('NOMBRE', $VALUE)){return;}
+			$mail->addAttachment($VALUE[0],$VALUE[1]);
+		}
+	}
+	$mail->send();
+	return 'OK';
+}
+
+function Str_Lo($INPUT){
+	return mb_strtolower($INPUT,'utf-8');
+}
+
+function Str_Up($INPUT){
+	return mb_strtoupper($INPUT,'utf-8');
+}
+
+function Str_Utf($str){	
+	if(is_array($str)){
+		$TMP =(array) array();
+		foreach($str as $VAR2 => $VAL2){
+			$TMP[$VAR2] = Str_Utf($VAL2);
+		}
+		return $TMP;
+	}
+	if($str === null){return "";}
+	$DETECT = mb_detect_encoding($str, array('UTF-8','ASCII','8bit','ISO-8859-1', 'HTML-ENTITIES'), true);
+	if($DETECT === false){return "";}
+	elseif($DETECT == 'UTF-8'){return $str;}
+	else{return mb_convert_encoding($str, 'UTF-8', $DETECT);}
+}
+
+function Calcular_Edad($NACIMIENTO){
+	$NACIMIENTO = new DateTime($NACIMIENTO);
+	$HOY = new DateTime();
+	$DIF = $HOY->diff($NACIMIENTO);
+	return $DIF->y;
+}
+
+function Template_Mail($PLANTILLA, $CONFIG = array()){
+	if(empty($CONFIG)){return '';}
+	
+	if(!array_key_exists('SEXO',$CONFIG)){$CONFIG['SEXO'] = 'M';}
+	if($CONFIG['SEXO'] == 'X'){$ESTIMADO = 'Estimade afiliade';}elseif($CONFIG['SEXO'] == 'F'){$ESTIMADO = 'Estimada afiliada';}else{$ESTIMADO = 'Estimado afiliado';}
+	if($PLANTILLA == 'REGISTRO_USUARIO'){
+		if(!array_key_exists('LINK',$CONFIG)){return '';}
+		if(!array_key_exists('CODIGO',$CONFIG)){return '';}
+		
+		$RETURN = '<div style="width:450px;border: 5px solid #27AE98; padding:20px 0px 20px 0px" align="center">';
+			$RETURN .= '<img src="data:image/png;base64,'.$GLOBALS['CFG_LOGO_DAS'].'"/>';
+			$RETURN .= '<br><hr>';
+			$RETURN .= '<h2><font color="BLUE"><b>REGISTRO DE USUARIO</b></font></h2>';
+			$RETURN .= '<h3>'.$ESTIMADO.',<br> Gracias por registrarse en el Sistema.</h3><hr>';
+			$RETURN .= '<h2>Tu código de verificación es: <br><a href="'.$CONFIG['LINK'].'"><b><font color="orange">'.$CONFIG['CODIGO'].'</font></b></a></h2>';	
+			$RETURN .= '<hr><br>';
+			$RETURN .= 'Muchas Gracias!';
+			$RETURN .= '<br>';
+			$RETURN .= 'DAS';
+		$RETURN .= '</div>';
+		return $RETURN;
+	}
+	elseif($PLANTILLA == 'REGISTRO_CORREO'){
+		if(!array_key_exists('LINK',$CONFIG)){return '';}
+		if(!array_key_exists('CODIGO',$CONFIG)){return '';}
+		$RETURN = '<div style="width:450px;border: 5px solid #27AE98; padding:20px 0px 20px 0px" align="center">';
+			$RETURN .= '<img src="data:image/png;base64,'.$GLOBALS['CFG_LOGO_DAS'].'"/>';
+			$RETURN .= '<br><hr>';
+			$RETURN .= '<h2><font color="BLUE"><b>ACTUALIZACION DE CORREO</b></font></h2>';
+			$RETURN .= '<h3>'.$ESTIMADO.',<br> Detectamos una actualizacion de tu correo.</h3><hr>';
+			$RETURN .= '<h2>Tu código de verificación es: <br><a href="'.$CONFIG['LINK'].'"><b><font color="orange">'.$CONFIG['CODIGO'].'</font></b></a></h2>';	
+			$RETURN .= '<hr><br>';
+			$RETURN .= 'Muchas Gracias!';
+			$RETURN .= '<br>';
+			$RETURN .= 'DAS';
+		$RETURN .= '</div>';
+		return $RETURN;
+	}
+	elseif($PLANTILLA == 'RECOVERY_PASSWORD'){
+		if(!array_key_exists('LINK',$CONFIG)){return '';}
+		if(!array_key_exists('CODIGO',$CONFIG)){return '';}
+		$RETURN = '<div style="width:450px;border: 5px solid #27AE98; padding:20px 0px 20px 0px" align="center">';
+			$RETURN .= '<img src="data:image/png;base64,'.$GLOBALS['CFG_LOGO_DAS'].'"/>';
+			$RETURN .= '<br><hr>';
+			$RETURN .= '<h2><font color="BLUE"><b>RECUPERAR CONTRASEÑA</b></font></h2>';
+			$RETURN .= '<h3>'.$ESTIMADO.',<br> se ha comenzado el proceso de recuperación de contraseña.</h3><hr>';
+			$RETURN .= '<h2>Tu código de verificación es: <br><a href="'.$CONFIG['LINK'].'"><b><font color="orange">'.$CONFIG['CODIGO'].'</font></b></a></h2>';	
+			$RETURN .= '<hr><br>';
+			$RETURN .= 'Muchas Gracias!';
+			$RETURN .= '<br>';
+			$RETURN .= 'DAS';
+		$RETURN .= '</div>';
+		return $RETURN;
+	}
+	elseif($PLANTILLA == 'UPDATE_CORREO'){
+		if(!array_key_exists('LINK',$CONFIG)){return '';}
+		if(!array_key_exists('CODIGO',$CONFIG)){return '';}
+		$RETURN = '<div style="width:450px;border: 5px solid #27AE98; padding:20px 0px 20px 0px" align="center">';
+			$RETURN .= '<img src="data:image/png;base64,'.$GLOBALS['CFG_LOGO_DAS'].'"/>';
+			$RETURN .= '<br><hr>';
+			$RETURN .= '<h2><font color="BLUE"><b>ACTUALIZACION DE CORREO</b></font></h2>';
+			$RETURN .= '<h3>'.$ESTIMADO.',<br> Hemos recibido una solicitud de actualización de correo electrónico.</h3><hr>';
+			$RETURN .= '<h2>Tu código de verificación es: <br><a href="'.$CONFIG['LINK'].'"><b><font color="orange">'.$CONFIG['CODIGO'].'</font></b></a></h2>';	
+			$RETURN .= '<hr>';
+			$RETURN .= '<h3>Si usted no solicitó esta actualización, por favor ignore este mensaje.</h3><hr>';
+			$RETURN .= 'Muchas Gracias!';
+			$RETURN .= '<br>';
+			$RETURN .= 'DAS';
+		$RETURN .= '</div>';
+		return $RETURN;
+	}
+	else{
+		return '';
+	}
+}
+?>

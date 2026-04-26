@@ -11,6 +11,7 @@ $ROUTES_SYS = array(
 		
 	"Psicologia" 	=> array(	"Archivo" => "menu",	"PermisosDefault" => array('C'),		"Padre" => "Inicio",	"menu" => array("Display" => "Psico",	"Icono" => "fa-brain")),
 			"PsicologiaCalendario" 			=> array(	"Archivo" => "psicologia/psicologia_calendario",	"PermisosDefault" => array(),	"Padre" => "Psicologia",	"menu" => array("Display" => "Calendario",	"Icono" => "fa-calendar-days"),		"Permisos" => array('C','A','M','B','E')),	
+			"PsicologiaPacientes" 			=> array(	"Archivo" => "psicologia/psicologia_pacientes",		"PermisosDefault" => array(),	"Padre" => "Psicologia",	"menu" => array("Display" => "Pacientes",	"Icono" => "fa-user"),		"Permisos" => array('C','A','M','B','E')),	
 			// "PsicologiaAdministrar" 			=> array(	"Archivo" => "psico/psico_administrar",	"PermisosDefault" => array(),	"Padre" => "Psicologia",	"menu" => array("Display" => "Configurar",	"Icono" => "fa-gears"),		"Permisos" => array('C','A','M','B','E')),	
 	
 

@@ -3,7 +3,7 @@
 
 
 $FILTRO_CATEGORIA[] = 0;
-$QuePermisos = QuerySelect("SELECT `id_categoria`, CASE WHEN `permiso` LIKE '%E%' THEN 1 ELSE 0 END AS 'E' FROM ".$DBT['USERS_TURNERAS_PERMISOS']." WHERE `id_usuario`='".$C_USER['ID']."' AND permiso LIKE '%E%'");
+$QuePermisos = QuerySelect("SELECT `id_categoria`, CASE WHEN `permiso` LIKE '%E%' THEN 1 ELSE 0 END AS 'E' FROM ".$DBT['PERMISOS_TURNERA']." WHERE `id_usuario`='".$C_USER['ID']."' AND permiso LIKE '%E%'");
 if(QueryNumRows($QuePermisos) > 0 ){
 	while($RowPermisos = QueryFetch($QuePermisos)){
 		if($RowPermisos['E'] == 1){ $FILTRO_CATEGORIA[] = $RowPermisos['id_categoria'];}
@@ -15,7 +15,7 @@ if($ROUTE_OPC == 'DL_Categorias'){
 	if($PP['E'] != 1){EJE($RETURN);}
 	$SEARCH = "  WHERE PTC.`disponible`='1'";
 	if(CIJE('CTS_SEARCH') !== TRUE){ $SEARCH .= " AND `categoria` LIKE '%".$sJ['CTS_SEARCH']."%'";};
-	$Que = QuerySelect("SELECT PTC.`id_categoria`,PTC.`categoria` FROM ".$DBT['TURNERAS_PARAM_CATEGORIAS'].' PTC '.$SEARCH." ORDER BY `categoria` ASC");
+	$Que = QuerySelect("SELECT PTC.`id_categoria`,PTC.`categoria` FROM ".$DBT['PARAMETRICAS_PSICO'].' PTC '.$SEARCH." ORDER BY `categoria` ASC");
 	while($Row = QueryFetch($Que)){
 		$TMP = [];
 		$TMP['ID']		= $Row['id_categoria'];
@@ -48,7 +48,7 @@ elseif($ROUTE_OPC == 'Listado_Agendas'){
 	$FORM = LISTADO_QUERY($ARRAY_ORDER);
 	$SEARCH = ' WHERE PTC.`id_categoria` IN ('.implode(",",$FILTRO_CATEGORIA).')';
 	if($FORM['SEARCH'] != ''){ $SEARCH .= " AND PTC.`categoria` LIKE '%".$FORM['SEARCH']."%'";}
-	$Que = QuerySelect("SELECT TA.`id_agenda`, PTC.`categoria`, TA.`profesional`, (SELECT MAX(`fecha_hasta`) FROM ".$DBT['TURNERAS_AGENDAS_PERIODO']." WHERE `id_agenda`=TA.`id_agenda`) AS 'fecha',CONCAT(TA.`edad_minima`,' - ',TA.`edad_maxima`) AS 'edad',TA.`sexo`,TA.`correo_subj`,TA.`portal`,TA.`disponible` FROM ".$DBT['TURNERAS_AGENDAS']." TA LEFT JOIN ".$DBT['TURNERAS_PARAM_CATEGORIAS']." PTC ON TA.`id_categoria`=PTC.`id_categoria`". $SEARCH." ORDER BY ".$FORM['ORDENAR']." LIMIT ".$FORM['LIMIT']." ,".$FORM['ROWS']);
+	$Que = QuerySelect("SELECT TA.`id_agenda`, PTC.`categoria`, TA.`profesional`, (SELECT MAX(`fecha_hasta`) FROM ".$DBT['TURNERAS_AGENDAS_PERIODO']." WHERE `id_agenda`=TA.`id_agenda`) AS 'fecha',CONCAT(TA.`edad_minima`,' - ',TA.`edad_maxima`) AS 'edad',TA.`sexo`,TA.`correo_subj`,TA.`portal`,TA.`disponible` FROM ".$DBT['TURNERAS_AGENDAS']." TA LEFT JOIN ".$DBT['PARAMETRICAS_PSICO']." PTC ON TA.`id_categoria`=PTC.`id_categoria`". $SEARCH." ORDER BY ".$FORM['ORDENAR']." LIMIT ".$FORM['LIMIT']." ,".$FORM['ROWS']);
 	while($Row = QueryFetch($Que)){
 		$RETURN['COUNT']++;
 		$TMP = [];
@@ -64,7 +64,7 @@ elseif($ROUTE_OPC == 'Listado_Agendas'){
 		array_push($RETURN['ROWS'], $TMP);
 		unset($TMP);
 	}
-	$Que = QuerySelect("SELECT COUNT(*) AS 'total' FROM ".$DBT['TURNERAS_AGENDAS']." TA LEFT JOIN ".$DBT['TURNERAS_PARAM_CATEGORIAS']." PTC ON TA.`id_categoria`=PTC.`id_categoria`". $SEARCH);
+	$Que = QuerySelect("SELECT COUNT(*) AS 'total' FROM ".$DBT['TURNERAS_AGENDAS']." TA LEFT JOIN ".$DBT['PARAMETRICAS_PSICO']." PTC ON TA.`id_categoria`=PTC.`id_categoria`". $SEARCH);
 	while($Row = QueryFetch($Que)){	
 		$RETURN['TOTAL'] = $Row['total'];
 		$RETURN['PAGINAS'] = ceil($RETURN['TOTAL']/$FORM['ROWS']);
@@ -83,7 +83,7 @@ elseif($ROUTE_OPC == 'Listado_Categorias'){
 	if($FORM['SEARCH'] != NULL){
 		$SEARCH = " WHERE `categoria` LIKE '%".$FORM['SEARCH']."%'";
 	}
-	$Que = QuerySelect("SELECT PTC.`id_categoria`, PTC.`categoria`,PTC.`intervalos_max_turnos`, PTC.`intervalo_lapso`, PTC.`intervalos_tipo`, PTC.`disponible` FROM ".$DBT['TURNERAS_PARAM_CATEGORIAS']." PTC ".$SEARCH." ORDER BY ".$FORM['ORDENAR']." LIMIT ".$FORM['LIMIT']." ,".$FORM['ROWS']);
+	$Que = QuerySelect("SELECT PTC.`id_categoria`, PTC.`categoria`,PTC.`intervalos_max_turnos`, PTC.`intervalo_lapso`, PTC.`intervalos_tipo`, PTC.`disponible` FROM ".$DBT['PARAMETRICAS_PSICO']." PTC ".$SEARCH." ORDER BY ".$FORM['ORDENAR']." LIMIT ".$FORM['LIMIT']." ,".$FORM['ROWS']);
 	while($Row = QueryFetch($Que)){
 		$RETURN['COUNT']++;
 		$TMP = [];
@@ -108,7 +108,7 @@ elseif($ROUTE_OPC == 'Listado_Categorias'){
 		array_push($RETURN['ROWS'], $TMP);
 		unset($TMP);
 	}
-	$Que = QuerySelect("SELECT COUNT(*) AS 'total' FROM ".$DBT['TURNERAS_PARAM_CATEGORIAS']." PTC ".$SEARCH);
+	$Que = QuerySelect("SELECT COUNT(*) AS 'total' FROM ".$DBT['PARAMETRICAS_PSICO']." PTC ".$SEARCH);
 	while($Row = QueryFetch($Que)){	
 		$RETURN['TOTAL'] = $Row['total'];
 		$RETURN['PAGINAS'] = ceil($RETURN['TOTAL']/$FORM['ROWS']);
@@ -125,7 +125,7 @@ elseif($ROUTE_OPC == 'Listado_Periodos'){
 	$ARRAY_ORDER = array(1 => '`fecha_desde` {METHOD}', 2 => '`fecha_hasta` {METHOD}');
 	$FORM = LISTADO_QUERY($ARRAY_ORDER);
 	$SEARCH = ' WHERE A.`id_agenda`="'.$sJ['CtU_ADVANCE'].'" AND PTC.`id_categoria` IN ('.implode(",",$FILTRO_CATEGORIA).')';
-	$Que = QuerySelect("SELECT P.`id_periodo`,P.`fecha_desde`,P.`fecha_hasta` FROM ".$DBT['TURNERAS_AGENDAS_PERIODO']." P JOIN ".$DBT['TURNERAS_AGENDAS']." A ON A.`id_agenda`=P.`id_agenda` JOIN ".$DBT['TURNERAS_PARAM_CATEGORIAS']." PTC ON PTC.`id_categoria`=A.`id_categoria` ".$SEARCH." ORDER BY ".$FORM['ORDENAR']." LIMIT ".$FORM['LIMIT']." ,".$FORM['ROWS']);
+	$Que = QuerySelect("SELECT P.`id_periodo`,P.`fecha_desde`,P.`fecha_hasta` FROM ".$DBT['TURNERAS_AGENDAS_PERIODO']." P JOIN ".$DBT['TURNERAS_AGENDAS']." A ON A.`id_agenda`=P.`id_agenda` JOIN ".$DBT['PARAMETRICAS_PSICO']." PTC ON PTC.`id_categoria`=A.`id_categoria` ".$SEARCH." ORDER BY ".$FORM['ORDENAR']." LIMIT ".$FORM['LIMIT']." ,".$FORM['ROWS']);
 	while($Row = QueryFetch($Que)){
 		$RETURN['COUNT']++;
 		$TMP = [];
@@ -135,7 +135,7 @@ elseif($ROUTE_OPC == 'Listado_Periodos'){
 		array_push($RETURN['ROWS'], $TMP);
 		unset($TMP);
 	}
-	$Que = QuerySelect("SELECT COUNT(*) AS 'total' FROM ".$DBT['TURNERAS_AGENDAS_PERIODO']." P JOIN ".$DBT['TURNERAS_AGENDAS']." A ON A.`id_agenda`=P.`id_agenda` JOIN ".$DBT['TURNERAS_PARAM_CATEGORIAS']." PTC ON PTC.`id_categoria`=A.`id_categoria` ".$SEARCH);
+	$Que = QuerySelect("SELECT COUNT(*) AS 'total' FROM ".$DBT['TURNERAS_AGENDAS_PERIODO']." P JOIN ".$DBT['TURNERAS_AGENDAS']." A ON A.`id_agenda`=P.`id_agenda` JOIN ".$DBT['PARAMETRICAS_PSICO']." PTC ON PTC.`id_categoria`=A.`id_categoria` ".$SEARCH);
 	while($Row = QueryFetch($Que)){	
 		$RETURN['TOTAL'] = $Row['total'];
 		$RETURN['PAGINAS'] = ceil($RETURN['TOTAL']/$FORM['ROWS']);
@@ -153,7 +153,7 @@ elseif($ROUTE_OPC == 'Listado_Turnos'){
 	$ARRAY_ORDER = array(1 => 'TAH.`dia_semana` {METHOD}, TAH.`hora` {METHOD}', 2 => 'TAH.`hora`,TAH.`dia_semana` {METHOD} {METHOD}', 3 => 'TAH.`turnos` {METHOD}');
 	$FORM = LISTADO_QUERY($ARRAY_ORDER);
 	$SEARCH = ' WHERE TAH.`id_periodo`="'.$sJ['CJS_ADVANCE']['CEI_ID_PERIODO'].'" AND TAP.`id_agenda`="'.$sJ['CJS_ADVANCE']['CEI_ID_AGENDA'].'" AND PTC.`id_categoria` IN ('.implode(",",$FILTRO_CATEGORIA).')';
-	$Que = QuerySelect("SELECT TAH.`id_horario`, TAH.`dia_semana`, TAH.`hora`, TAH.`turnos` FROM ".$DBT['TURNERAS_AGENDAS_HORARIOS']." TAH LEFT JOIN ".$DBT['TURNERAS_AGENDAS_PERIODO']." TAP ON TAH.`id_periodo`=TAP.`id_periodo` JOIN ".$DBT['TURNERAS_AGENDAS']." A ON A.`id_agenda`=TAP.`id_agenda` JOIN ".$DBT['TURNERAS_PARAM_CATEGORIAS']." PTC ON PTC.`id_categoria`=A.`id_categoria` ".$SEARCH." ORDER BY ".$FORM['ORDENAR']." LIMIT ".$FORM['LIMIT']." ,".$FORM['ROWS']);
+	$Que = QuerySelect("SELECT TAH.`id_horario`, TAH.`dia_semana`, TAH.`hora`, TAH.`turnos` FROM ".$DBT['TURNERAS_AGENDAS_HORARIOS']." TAH LEFT JOIN ".$DBT['TURNERAS_AGENDAS_PERIODO']." TAP ON TAH.`id_periodo`=TAP.`id_periodo` JOIN ".$DBT['TURNERAS_AGENDAS']." A ON A.`id_agenda`=TAP.`id_agenda` JOIN ".$DBT['PARAMETRICAS_PSICO']." PTC ON PTC.`id_categoria`=A.`id_categoria` ".$SEARCH." ORDER BY ".$FORM['ORDENAR']." LIMIT ".$FORM['LIMIT']." ,".$FORM['ROWS']);
 	while($Row = QueryFetch($Que)){
 		$RETURN['COUNT']++;
 		$TMP = [];
@@ -164,7 +164,7 @@ elseif($ROUTE_OPC == 'Listado_Turnos'){
 		array_push($RETURN['ROWS'], $TMP);
 		unset($TMP);
 	}
-	$Que = QuerySelect("SELECT COUNT(*) AS 'total' FROM ".$DBT['TURNERAS_AGENDAS_HORARIOS']." TAH LEFT JOIN ".$DBT['TURNERAS_AGENDAS_PERIODO']." TAP ON TAH.`id_periodo`=TAP.`id_periodo` JOIN ".$DBT['TURNERAS_AGENDAS']." A ON A.`id_agenda`=TAP.`id_agenda` JOIN ".$DBT['TURNERAS_PARAM_CATEGORIAS']." PTC ON PTC.`id_categoria`=A.`id_categoria` ".$SEARCH);
+	$Que = QuerySelect("SELECT COUNT(*) AS 'total' FROM ".$DBT['TURNERAS_AGENDAS_HORARIOS']." TAH LEFT JOIN ".$DBT['TURNERAS_AGENDAS_PERIODO']." TAP ON TAH.`id_periodo`=TAP.`id_periodo` JOIN ".$DBT['TURNERAS_AGENDAS']." A ON A.`id_agenda`=TAP.`id_agenda` JOIN ".$DBT['PARAMETRICAS_PSICO']." PTC ON PTC.`id_categoria`=A.`id_categoria` ".$SEARCH);
 	while($Row = QueryFetch($Que)){	
 		$RETURN['TOTAL'] = $Row['total'];
 		$RETURN['PAGINAS'] = ceil($RETURN['TOTAL']/$FORM['ROWS']);
@@ -196,7 +196,7 @@ elseif($ROUTE_OPC == 'Procesar_Agenda'){
 	$QueFeriados = QuerySelect("SELECT `id_agenda` FROM ".$DBT['FERIADOS_AGENDAS']." WHERE `id_agenda`='".$sJ['CET_ID_FERIADO']."' AND `disponible`='1'");
 	if(QueryNumRows($QueFeriados) < 1){ RJRE("El calendario de feriados no esta disponible"); }
 	
-	$QueCategoria = QuerySelect("SELECT PTC.`id_categoria` FROM ".$DBT['TURNERAS_PARAM_CATEGORIAS']." PTC WHERE PTC.`id_categoria`='".$sJ['CET_ID_CATEGORIA']."' AND PTC.`disponible`='1'");
+	$QueCategoria = QuerySelect("SELECT PTC.`id_categoria` FROM ".$DBT['PARAMETRICAS_PSICO']." PTC WHERE PTC.`id_categoria`='".$sJ['CET_ID_CATEGORIA']."' AND PTC.`disponible`='1'");
 	if(QueryNumRows($QueCategoria) < 1){ RJRE("La turnera seleccionada no esta disponible"); }	
 	
 	$QueDup = QuerySelect("SELECT `id_agenda` FROM ".$DBT['TURNERAS_AGENDAS']." WHERE `id_categoria`='".$sJ['CET_ID_CATEGORIA']."' AND `profesional` = '".$sJ['CTS_PROFESIONAL']."'");
@@ -241,18 +241,18 @@ elseif($ROUTE_OPC == 'Procesar_Categoria'){
 	if($sJ['CES_LAPSO'] != 0 && $sJ['CTS_TIPO'] == '' || $sJ['CTS_TIPO'] == '' && $sJ['CES_LAPSO'] != 0 ){ RJRE("Los intervalos no se corresponden entre si"); }
 	if(strlen($sJ['CTS_CATEGORIA'])> 30){RJRE("El nombre de la turnera supero el largo permitido");}
 	
-	$QueDup = QuerySelect("SELECT PTC.`id_categoria`,PTC.`disponible` FROM ".$DBT['TURNERAS_PARAM_CATEGORIAS']." PTC WHERE PTC.`categoria`='".$sJ['CTS_CATEGORIA']."'");
+	$QueDup = QuerySelect("SELECT PTC.`id_categoria`,PTC.`disponible` FROM ".$DBT['PARAMETRICAS_PSICO']." PTC WHERE PTC.`categoria`='".$sJ['CTS_CATEGORIA']."'");
 	if(QueryNumRows($QueDup) > 0){ While($RowDup = QueryFetch($QueDup)){ if( $RowDup['id_categoria'] != $sJ['CET_ID_CATEGORIA']){ RJRE("La turnera ya se encuentra registrada"); }}}
 	
 	if($sJ['CET_ID_CATEGORIA'] == 0){
-		QueryInsert("INSERT INTO ".$DBT['TURNERAS_PARAM_CATEGORIAS']." (`categoria`,`intervalos_max_turnos`, `intervalo_lapso`, `intervalos_tipo`, `reg_usuario`, `reg_fecha`) VALUES ('".$sJ['CTS_CATEGORIA']."','".$sJ['CET_TURNOS']."','".$sJ['CES_LAPSO']."',".QueryValue($sJ['CTS_TIPO']).",'".$C_USER['ID']."', NOW())");	
+		QueryInsert("INSERT INTO ".$DBT['PARAMETRICAS_PSICO']." (`categoria`,`intervalos_max_turnos`, `intervalo_lapso`, `intervalos_tipo`, `reg_usuario`, `reg_fecha`) VALUES ('".$sJ['CTS_CATEGORIA']."','".$sJ['CET_TURNOS']."','".$sJ['CES_LAPSO']."',".QueryValue($sJ['CTS_TIPO']).",'".$C_USER['ID']."', NOW())");	
 	}
 	else{
-		$QueCategoria = QuerySelect("SELECT PTC.`id_categoria`, PTC.`categoria`,PTC.`intervalos_max_turnos`, PTC.`intervalo_lapso`, PTC.`intervalos_tipo`,PTC.`disponible` FROM ".$DBT['TURNERAS_PARAM_CATEGORIAS']." PTC WHERE PTC.`id_categoria` = '".$sJ['CET_ID_CATEGORIA']."'");
+		$QueCategoria = QuerySelect("SELECT PTC.`id_categoria`, PTC.`categoria`,PTC.`intervalos_max_turnos`, PTC.`intervalo_lapso`, PTC.`intervalos_tipo`,PTC.`disponible` FROM ".$DBT['PARAMETRICAS_PSICO']." PTC WHERE PTC.`id_categoria` = '".$sJ['CET_ID_CATEGORIA']."'");
 		if(QueryNumRows($QueCategoria) < 1){RJRE("Error al procesar la turnera seleccionada");}
 		While($RowCategoria = QueryFetch($QueCategoria)){
 			if($RowCategoria['categoria'] != $sJ['CTS_CATEGORIA'] || $RowCategoria['intervalos_max_turnos'] != $sJ['CET_TURNOS'] || $RowCategoria['intervalo_lapso'] != $sJ['CES_LAPSO'] || $RowCategoria['intervalos_tipo'] != $sJ['CTS_TIPO']){
-				QueryUpdate ("UPDATE ".$DBT['TURNERAS_PARAM_CATEGORIAS']." SET `categoria` = '".$sJ['CTS_CATEGORIA']."', `intervalos_max_turnos` = '".$sJ['CET_TURNOS']."', `intervalo_lapso` = '".$sJ['CES_LAPSO']."', `intervalos_tipo` = ".QueryValue($sJ['CTS_TIPO']).", `reg_usuario`='".$C_USER['ID']."', `reg_fecha`=NOW() WHERE `id_categoria` = '".$sJ['CET_ID_CATEGORIA']."'") ;
+				QueryUpdate ("UPDATE ".$DBT['PARAMETRICAS_PSICO']." SET `categoria` = '".$sJ['CTS_CATEGORIA']."', `intervalos_max_turnos` = '".$sJ['CET_TURNOS']."', `intervalo_lapso` = '".$sJ['CES_LAPSO']."', `intervalos_tipo` = ".QueryValue($sJ['CTS_TIPO']).", `reg_usuario`='".$C_USER['ID']."', `reg_fecha`=NOW() WHERE `id_categoria` = '".$sJ['CET_ID_CATEGORIA']."'") ;
 			}
 		}
 	}
@@ -268,7 +268,7 @@ elseif($ROUTE_OPC == 'Procesar_Periodo'){
 	
 	if($sJ['CFA_DESDE'] > $sJ['CFA_HASTA']){ RJRE("La fecha HASTA debe ser mayor igual a DESDE"); }
 	
-	$QueAgenda = QuerySelect("SELECT A.`id_agenda` FROM ".$DBT['TURNERAS_AGENDAS']." A JOIN ".$DBT['TURNERAS_PARAM_CATEGORIAS']." PTC ON A.`id_categoria` = PTC.`id_categoria` WHERE A.`id_agenda`='".$sJ['CEI_ID_AGENDA']."' AND A.`disponible` = '1' AND PTC.`id_categoria` IN (".implode(",",$FILTRO_CATEGORIA).")");
+	$QueAgenda = QuerySelect("SELECT A.`id_agenda` FROM ".$DBT['TURNERAS_AGENDAS']." A JOIN ".$DBT['PARAMETRICAS_PSICO']." PTC ON A.`id_categoria` = PTC.`id_categoria` WHERE A.`id_agenda`='".$sJ['CEI_ID_AGENDA']."' AND A.`disponible` = '1' AND PTC.`id_categoria` IN (".implode(",",$FILTRO_CATEGORIA).")");
 	if(QueryNumRows($QueAgenda) < 1){ RJRE("La agenda no existe o no se encuentra disponible"); }
 	
 	$QueDup = QuerySelect("SELECT `id_periodo`, `fecha_desde`, `fecha_hasta` FROM ".$DBT['TURNERAS_AGENDAS_PERIODO']." WHERE `id_agenda`='".$sJ['CEI_ID_AGENDA']."' AND ( `fecha_desde` BETWEEN  '".$sJ['CFA_DESDE']."' AND '".$sJ['CFA_HASTA']."' OR `fecha_hasta` BETWEEN  '".$sJ['CFA_DESDE']."' AND '".$sJ['CFA_HASTA']."' OR '".$sJ['CFA_DESDE']."' BETWEEN `fecha_desde` AND `fecha_hasta` OR '".$sJ['CFA_HASTA']."' BETWEEN `fecha_desde` AND `fecha_hasta`)");
@@ -305,7 +305,7 @@ elseif($ROUTE_OPC == 'Procesar_Periodo_Borrar'){
 	if(CIJE('CEI_ID_AGENDA') === TRUE){RJRE("No se pudo procesar el identificador de la agenda");};
 	if(CIJE('CEI_ID_PERIODO') === TRUE){RJRE("No se pudo procesar el identificador del periodo");};
 	
-	$Que = QuerySelect("SELECT P.`id_periodo` FROM ".$DBT['TURNERAS_AGENDAS_PERIODO']." P JOIN ".$DBT['TURNERAS_AGENDAS']." A ON P.`id_agenda`=A.`id_agenda` JOIN ".$DBT['TURNERAS_PARAM_CATEGORIAS']." PTC ON A.`id_categoria` = PTC.`id_categoria` WHERE A.`id_agenda`='".$sJ['CEI_ID_AGENDA']."' AND P.`id_periodo` = '".$sJ['CEI_ID_PERIODO']."' AND PTC.`id_categoria` IN (".implode(",",$FILTRO_CATEGORIA).")");
+	$Que = QuerySelect("SELECT P.`id_periodo` FROM ".$DBT['TURNERAS_AGENDAS_PERIODO']." P JOIN ".$DBT['TURNERAS_AGENDAS']." A ON P.`id_agenda`=A.`id_agenda` JOIN ".$DBT['PARAMETRICAS_PSICO']." PTC ON A.`id_categoria` = PTC.`id_categoria` WHERE A.`id_agenda`='".$sJ['CEI_ID_AGENDA']."' AND P.`id_periodo` = '".$sJ['CEI_ID_PERIODO']."' AND PTC.`id_categoria` IN (".implode(",",$FILTRO_CATEGORIA).")");
 	if(QueryNumRows($Que) < 1){ RJRE("El turno no existe o no se encuentra disponible"); }
 	
 	QueryUpdate("UPDATE ".$DBT['TURNERAS_AGENDAS_PERIODO']." SET `disponible`='0',`reg_usuario`='".$C_USER['ID']."',`reg_fecha`=NOW() WHERE `id_periodo`='".$sJ['CEI_ID_PERIODO']."'");
@@ -324,7 +324,7 @@ elseif($ROUTE_OPC == 'Procesar_Turnos'){
 	if($sJ['CET_CANTIDAD'] == 0){RJRE("La cantidad debe ser igual o mayor a 1");}
 	if(CIJE('CHA_HORA') === TRUE){RJRE("No se pudo procesar la hora del turno");};
 	
-	$QueAgenda = QuerySelect("SELECT A.`id_agenda` FROM ".$DBT['TURNERAS_AGENDAS']." A JOIN ".$DBT['TURNERAS_PARAM_CATEGORIAS']." PTC ON A.`id_categoria` = PTC.`id_categoria` WHERE A.`id_agenda`='".$sJ['CEI_ID_AGENDA']."' AND A.`disponible` = '1' AND PTC.`id_categoria` IN (".implode(",",$FILTRO_CATEGORIA).")");
+	$QueAgenda = QuerySelect("SELECT A.`id_agenda` FROM ".$DBT['TURNERAS_AGENDAS']." A JOIN ".$DBT['PARAMETRICAS_PSICO']." PTC ON A.`id_categoria` = PTC.`id_categoria` WHERE A.`id_agenda`='".$sJ['CEI_ID_AGENDA']."' AND A.`disponible` = '1' AND PTC.`id_categoria` IN (".implode(",",$FILTRO_CATEGORIA).")");
 	if(QueryNumRows($QueAgenda) < 1){ RJRE("La agenda no existe o no se encuentra disponible"); }
 	
 	$QuePeriodo = QuerySelect("SELECT `id_periodo` FROM ".$DBT['TURNERAS_AGENDAS_PERIODO']." WHERE `id_agenda`='".$sJ['CEI_ID_AGENDA']."' AND `id_periodo` = '".$sJ['CEI_ID_PERIODO']."'");
@@ -359,7 +359,7 @@ elseif($ROUTE_OPC == 'Procesar_Turnos_Editar'){
 	if(CIJE('CHA_HORA') === TRUE){RJRE("No se pudo procesar la hora del turno");};
 	if(CIJE('CTS_DIA') === TRUE){RJRE("No se pudo procesar el día del turno");};
 	
-	$Que = QuerySelect("SELECT A.`id_agenda`,P.`id_periodo`,H.`id_horario`,H.`dia_semana`,H.`hora`,H.`turnos` FROM ".$DBT['TURNERAS_AGENDAS_HORARIOS']." H JOIN ".$DBT['TURNERAS_AGENDAS_PERIODO']." P ON H.`id_periodo`=P.`id_periodo` JOIN ".$DBT['TURNERAS_AGENDAS']." A ON P.`id_agenda`=A.`id_agenda` JOIN ".$DBT['TURNERAS_PARAM_CATEGORIAS']." PTC ON A.`id_categoria` = PTC.`id_categoria` WHERE A.`id_agenda`='".$sJ['CEI_ID_AGENDA']."' AND P.`id_periodo` = '".$sJ['CEI_ID_PERIODO']."' AND H.`id_horario` = '".$sJ['CEI_ID_HORARIO']."' AND PTC.`id_categoria` IN (".implode(",",$FILTRO_CATEGORIA).")") ;
+	$Que = QuerySelect("SELECT A.`id_agenda`,P.`id_periodo`,H.`id_horario`,H.`dia_semana`,H.`hora`,H.`turnos` FROM ".$DBT['TURNERAS_AGENDAS_HORARIOS']." H JOIN ".$DBT['TURNERAS_AGENDAS_PERIODO']." P ON H.`id_periodo`=P.`id_periodo` JOIN ".$DBT['TURNERAS_AGENDAS']." A ON P.`id_agenda`=A.`id_agenda` JOIN ".$DBT['PARAMETRICAS_PSICO']." PTC ON A.`id_categoria` = PTC.`id_categoria` WHERE A.`id_agenda`='".$sJ['CEI_ID_AGENDA']."' AND P.`id_periodo` = '".$sJ['CEI_ID_PERIODO']."' AND H.`id_horario` = '".$sJ['CEI_ID_HORARIO']."' AND PTC.`id_categoria` IN (".implode(",",$FILTRO_CATEGORIA).")") ;
 	if(QueryNumRows($Que) < 1){ RJRE("El turno no existe o no se encuentra disponible"); }
 			
 	while($Row = QueryFetch($Que)){
@@ -380,7 +380,7 @@ elseif($ROUTE_OPC == 'Procesar_Turnos_Borrar'){
 	if(CIJE('CEI_ID_PERIODO') === TRUE){RJRE("No se pudo procesar el identificador del periodo");};
 	if(CIJE('CEI_ID_HORARIO') === TRUE){RJRE("No se pudo procesar el identificador del turno");};
 	
-	$Que = QuerySelect("SELECT A.`id_agenda`,P.`id_periodo`,H.`id_horario`,H.`dia_semana`,H.`hora`,H.`turnos` FROM ".$DBT['TURNERAS_AGENDAS_HORARIOS']." H LEFT JOIN ".$DBT['TURNERAS_AGENDAS_PERIODO']." P ON H.`id_periodo`=P.`id_periodo` LEFT JOIN ".$DBT['TURNERAS_AGENDAS']." A ON P.`id_agenda`=A.`id_agenda` JOIN ".$DBT['TURNERAS_PARAM_CATEGORIAS']." PTC ON A.`id_categoria` = PTC.`id_categoria` WHERE A.`id_agenda`='".$sJ['CEI_ID_AGENDA']."' AND P.`id_periodo` = '".$sJ['CEI_ID_PERIODO']."' AND H.`id_horario` = '".$sJ['CEI_ID_HORARIO']."' AND PTC.`id_categoria` IN (".implode(",",$FILTRO_CATEGORIA).")") ;
+	$Que = QuerySelect("SELECT A.`id_agenda`,P.`id_periodo`,H.`id_horario`,H.`dia_semana`,H.`hora`,H.`turnos` FROM ".$DBT['TURNERAS_AGENDAS_HORARIOS']." H LEFT JOIN ".$DBT['TURNERAS_AGENDAS_PERIODO']." P ON H.`id_periodo`=P.`id_periodo` LEFT JOIN ".$DBT['TURNERAS_AGENDAS']." A ON P.`id_agenda`=A.`id_agenda` JOIN ".$DBT['PARAMETRICAS_PSICO']." PTC ON A.`id_categoria` = PTC.`id_categoria` WHERE A.`id_agenda`='".$sJ['CEI_ID_AGENDA']."' AND P.`id_periodo` = '".$sJ['CEI_ID_PERIODO']."' AND H.`id_horario` = '".$sJ['CEI_ID_HORARIO']."' AND PTC.`id_categoria` IN (".implode(",",$FILTRO_CATEGORIA).")") ;
 	if(QueryNumRows($Que) < 1){ RJRE("El turno no existe o no se encuentra disponible"); }
 	QueryUpdate("UPDATE ".$DBT['TURNERAS_AGENDAS_HORARIOS']." SET `turnos`='0',`reg_usuario`='".$C_USER['ID']."',`reg_fecha`=NOW() WHERE `id_horario`='".$sJ['CEI_ID_HORARIO']."'");
 	QueryDelete("DELETE FROM ".$DBT['TURNERAS_AGENDAS_HORARIOS']." WHERE `id_horario`='".$sJ['CEI_ID_HORARIO']."'");
@@ -390,7 +390,7 @@ elseif($ROUTE_OPC == 'Ver_Agenda'){
 	$RETURN['ID_AGENDA'] = 0;
 	if($PP['E'] != 1){EJE($RETURN);}
 	if(CIJE('CEI_ID_AGENDA') === TRUE){$sJ['CEI_ID_AGENDA'] = 0;};
-	$Que = QuerySelect("SELECT A.`id_agenda`, A.`id_categoria`, PTC.`categoria`, A.`profesional`, A.`edad_minima`, A.`edad_maxima`, A.`sexo`,A.`cierre_dia`, A.`cierre_horario`, A.`id_feriados`, A.`correo_subj`, A.`correo_mens`, A.`portal`, A.`id_feriados` FROM ".$DBT['TURNERAS_AGENDAS']." A LEFT JOIN ".$DBT['TURNERAS_PARAM_CATEGORIAS']." PTC ON A.`id_categoria`=PTC.`id_categoria` WHERE `id_agenda` = '".$sJ['CEI_ID_AGENDA']."'") ;
+	$Que = QuerySelect("SELECT A.`id_agenda`, A.`id_categoria`, PTC.`categoria`, A.`profesional`, A.`edad_minima`, A.`edad_maxima`, A.`sexo`,A.`cierre_dia`, A.`cierre_horario`, A.`id_feriados`, A.`correo_subj`, A.`correo_mens`, A.`portal`, A.`id_feriados` FROM ".$DBT['TURNERAS_AGENDAS']." A LEFT JOIN ".$DBT['PARAMETRICAS_PSICO']." PTC ON A.`id_categoria`=PTC.`id_categoria` WHERE `id_agenda` = '".$sJ['CEI_ID_AGENDA']."'") ;
 	if(QueryNumRows($Que) < 1){RJRE("Error al encontrar la agenda");}
 	while($Row = QueryFetch($Que)){
 		
@@ -422,7 +422,7 @@ elseif($ROUTE_OPC == 'Ver_Categoria'){
 	$RETURN['ID_CATEGORIA'] = 0;
 	if($PP['E'] != 1){EJE($RETURN);}
 	if(CIJE('CET_ID_CATEGORIA') === TRUE){RJRE("Error al procesar la turnera");};
-	$Que = QuerySelect("SELECT PTC.`id_categoria`, PTC.`categoria`, PTC.`intervalos_max_turnos`, PTC.`intervalo_lapso`, PTC.`intervalos_tipo` FROM ".$DBT['TURNERAS_PARAM_CATEGORIAS']." PTC WHERE PTC.`id_categoria` = '".$sJ['CET_ID_CATEGORIA']."'") ;
+	$Que = QuerySelect("SELECT PTC.`id_categoria`, PTC.`categoria`, PTC.`intervalos_max_turnos`, PTC.`intervalo_lapso`, PTC.`intervalos_tipo` FROM ".$DBT['PARAMETRICAS_PSICO']." PTC WHERE PTC.`id_categoria` = '".$sJ['CET_ID_CATEGORIA']."'") ;
 	if(QueryNumRows($Que) < 1){RJRE("Error al encontrar la turnera");}
 	while($Row = QueryFetch($Que)){
 		$RETURN['ID_CATEGORIA'] = $Row['id_categoria'];
@@ -438,7 +438,7 @@ elseif($ROUTE_OPC == 'Ver_Periodo'){
 	$RETURN['ID_AGENDA'] = 0;
 	if($PP['C'] != 1){EJE($RETURN);}
 	if(CIJE('CEI_ID_PERIODO') === TRUE){RJRE("Error al procesar la turnera");};
-	$Que = QuerySelect("SELECT P.`id_periodo`,P.`fecha_desde`,P.`fecha_hasta`, P.`id_agenda` FROM ".$DBT['TURNERAS_AGENDAS_PERIODO']." P JOIN ".$DBT['TURNERAS_AGENDAS']." A ON A.`id_agenda`=P.`id_agenda` JOIN ".$DBT['TURNERAS_PARAM_CATEGORIAS']." PTC ON PTC.`id_categoria`=A.`id_categoria` 	WHERE P.`id_periodo` = '".$sJ['CEI_ID_PERIODO']."' AND PTC.`id_categoria` IN (".implode(",",$FILTRO_CATEGORIA).")") ;
+	$Que = QuerySelect("SELECT P.`id_periodo`,P.`fecha_desde`,P.`fecha_hasta`, P.`id_agenda` FROM ".$DBT['TURNERAS_AGENDAS_PERIODO']." P JOIN ".$DBT['TURNERAS_AGENDAS']." A ON A.`id_agenda`=P.`id_agenda` JOIN ".$DBT['PARAMETRICAS_PSICO']." PTC ON PTC.`id_categoria`=A.`id_categoria` 	WHERE P.`id_periodo` = '".$sJ['CEI_ID_PERIODO']."' AND PTC.`id_categoria` IN (".implode(",",$FILTRO_CATEGORIA).")") ;
 	if(QueryNumRows($Que) < 1){EJE($RETURN);}
 	while($Row = QueryFetch($Que)){
 		$RETURN['ID_PERIODO'] 	= $Row['id_periodo'];
@@ -455,7 +455,7 @@ elseif($ROUTE_OPC == 'Ver_Horario'){
 	if($PP['C'] != 1){EJE($RETURN);}
 	if(CIJE('CEI_ID_AGENDA') === TRUE || CIJE('CEI_ID_PERIODO') === TRUE || CIJE('CEI_ID_HORARIO') === TRUE){RJRE("Error al procesar la turnera");};
 	
-	$Que = QuerySelect("SELECT A.`id_agenda`,P.`id_periodo`,H.`id_horario`,H.`dia_semana`,H.`hora`,H.`turnos` FROM ".$DBT['TURNERAS_AGENDAS_HORARIOS']." H JOIN ".$DBT['TURNERAS_AGENDAS_PERIODO']." P ON H.`id_periodo`=P.`id_periodo` JOIN ".$DBT['TURNERAS_AGENDAS']." A ON P.`id_agenda`=A.`id_agenda` JOIN ".$DBT['TURNERAS_PARAM_CATEGORIAS']." PTC ON PTC.`id_categoria`=A.`id_categoria`WHERE A.`id_agenda`='".$sJ['CEI_ID_AGENDA']."' AND P.`id_periodo` = '".$sJ['CEI_ID_PERIODO']."' AND H.`id_horario` = '".$sJ['CEI_ID_HORARIO']."' AND PTC.`id_categoria` IN (".implode(",",$FILTRO_CATEGORIA).")") ;
+	$Que = QuerySelect("SELECT A.`id_agenda`,P.`id_periodo`,H.`id_horario`,H.`dia_semana`,H.`hora`,H.`turnos` FROM ".$DBT['TURNERAS_AGENDAS_HORARIOS']." H JOIN ".$DBT['TURNERAS_AGENDAS_PERIODO']." P ON H.`id_periodo`=P.`id_periodo` JOIN ".$DBT['TURNERAS_AGENDAS']." A ON P.`id_agenda`=A.`id_agenda` JOIN ".$DBT['PARAMETRICAS_PSICO']." PTC ON PTC.`id_categoria`=A.`id_categoria`WHERE A.`id_agenda`='".$sJ['CEI_ID_AGENDA']."' AND P.`id_periodo` = '".$sJ['CEI_ID_PERIODO']."' AND H.`id_horario` = '".$sJ['CEI_ID_HORARIO']."' AND PTC.`id_categoria` IN (".implode(",",$FILTRO_CATEGORIA).")") ;
 	if(QueryNumRows($Que) < 1){RJRE("Error al encontrar la turnera");}
 	while($Row = QueryFetch($Que)){
 		$RETURN['ID_AGENDA'] 	= $Row['id_agenda'];

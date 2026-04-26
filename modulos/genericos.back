@@ -1,8 +1,0 @@
-<?php
-if($ROUTE_OPC == 'xxx'){
-
-}
-else{
-	EE("NO_SE_PUEDE_PROCESAR_LA_SOLICITUD");
-}
-?>

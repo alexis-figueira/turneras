@@ -1,0 +1,124 @@
+<?php
+$DBT = array(
+	"PACIENTES"		=>	$ZXS['PSI'].".`psicologia__pacientes`",
+	"PAGOS"			=>	$ZXS['PSI'].".`psicologia__pagos`",
+	"TURNOS"		=>	$ZXS['PSI'].".`psicologia__turnos`",
+	
+	// "TURNERAS_PARAM_CATEGORIAS"		=>	$ZXS['O'].".`parametricas__turneras_categorias`",
+	"TURNERAS_AGENDAS"				=>	$ZXS['PSI'].".`turneras__agenda`",
+	"TURNERAS_AGENDAS_HORARIOS"		=>	$ZXS['PSI'].".`turneras__agendas_horarios`",
+	"TURNERAS_AGENDAS_PERIODO"		=>	$ZXS['PSI'].".`turneras__agendas_periodo`",
+	"TURNERAS_SUSPENCIONES"			=>	$ZXS['PSI'].".`turneras__suspenciones`",
+	"TURNERAS_TURNOS"				=>	$ZXS['PSI'].".`turneras__turnos`",	
+	
+	"PERMISOS_TURNERA"				=>	$ZXS['PSI'].".`sys__turneras_permisos`",
+	"PARAMETRICAS_PSICO"			=>	$ZXS['PSI'].".`parametricas__turneras_categorias`",	
+	
+	"USERS"							=> 	$ZXS['PSI'].".`sys__users`",
+	"USERS_LOGS"					=> 	$ZXS['PSI'].".`sys__users_logs`",
+	"USERS_MAIL"					=> 	$ZXS['PSI'].".`sys__users_mail`",
+	"USERS_PERMISOS"				=>	$ZXS['PSI'].".`sys__users_permisos`",
+);
+
+try{
+	$GLOBALS['QWE'] = new PDO("mysql:host=" . $ZXSD['HOST'] . ";charset=utf8mb4", $ZXSD['USER'], $ZXSD['PASS'], [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC]);
+    // Configurar el timezone para la conexión
+    $timezone = '-03:00'; // Cambia según tu zona horaria
+    $GLOBALS['QWE']->query("SET time_zone = '$timezone'");
+}catch(PDOException $e){
+	echo "Sitio en mantenimiento.";exit;
+}
+
+function QueryDelete($QUERY, $CON = 'QWE'){
+	if(!array_key_exists('NAME',$GLOBALS['C_USER'])){$GLOBALS['C_USER']['NAME'] = '';}
+	$file = array_column(debug_backtrace(),'file')[0];
+	$function = array_column(debug_backtrace(),'function')[0];
+	$args = array_column(debug_backtrace(),'args')[0][0];
+	$FOLDER_LOG = Return_File_Path('SQL', "/".basename($file).".txt");
+	
+	$Escribir = date("Y-m-d H:i:s"). " -> ".ClientIP()." -> ".$GLOBALS['C_USER']['NAME']." -> ".$function." -> ".$args.PHP_EOL;
+	file_put_contents($FOLDER_LOG, $Escribir, FILE_APPEND);
+	
+	$QUERY = str_ireplace(array('Drop','Insert','Select','Show','Truncate','Union','Update',';'),"",$QUERY);
+	try{
+		return $QUERY = $GLOBALS[$CON]->Query($QUERY);
+	}catch(PDOException $e){
+		$FOLDER_ERROR = Return_File_Path('SQL', "/Errores.txt");
+		$Escribir_error = date("Y-m-d H:i:s"). " -> ".ClientIP()." -> ".$GLOBALS['C_USER']['NAME']." -> ".basename($file)." -> ".$function." -> ".$args." -> ".$e->getMessage().PHP_EOL;
+		file_put_contents($FOLDER_ERROR, $Escribir_error, FILE_APPEND);
+		echo "No se pudo ejecutar la consulta";exit;
+	}	
+}
+function QueryInsert($QUERY, $CON = 'QWE'){
+	if(!array_key_exists('NAME',$GLOBALS['C_USER'])){$GLOBALS['C_USER']['NAME'] = '';}
+	$file = array_column(debug_backtrace(),'file')[0];
+	$function = array_column(debug_backtrace(),'function')[0];
+	$args = array_column(debug_backtrace(),'args')[0][0];
+	$FOLDER_LOG = Return_File_Path('SQL', "/".basename($file).".txt");
+
+	$Escribir = date("Y-m-d H:i:s"). " -> ".ClientIP()." -> ".$GLOBALS['C_USER']['NAME']." -> ".$function." -> ".$args.PHP_EOL;
+	file_put_contents($FOLDER_LOG, $Escribir, FILE_APPEND);
+
+	$QUERY = str_ireplace(array('Delete','Drop','Select','Show ','Truncate','Union','Update',';'),"",$QUERY);
+	try{
+		return $QUERY = $GLOBALS[$CON]->Query($QUERY);
+	}catch(PDOException $e){
+		$FOLDER_ERROR = Return_File_Path('SQL', "/Errores.txt");
+		$Escribir_error = date("Y-m-d H:i:s"). " -> ".ClientIP()." -> ".$GLOBALS['C_USER']['NAME']." -> ".basename($file)." -> ".$function." -> ".$args." -> ".$e->getMessage().PHP_EOL;
+		file_put_contents($FOLDER_ERROR, $Escribir_error, FILE_APPEND);
+		echo "No se pudo ejecutar la consulta";exit;
+	}	
+}
+function QuerySelect($QUERY, $CON = 'QWE'){
+	if(!array_key_exists('NAME',$GLOBALS['C_USER'])){$GLOBALS['C_USER']['NAME'] = '';}
+	$file = array_column(debug_backtrace(),'file')[0];
+	$function = array_column(debug_backtrace(),'function')[0];
+	$args = array_column(debug_backtrace(),'args')[0][0];
+	$FOLDER_LOG = Return_File_Path('SQL', "/".basename($file).".txt");
+	
+	$Escribir = date("Y-m-d H:i:s"). " -> ".ClientIP()." -> ".$GLOBALS['C_USER']['NAME']." -> ".$function." -> ".$args.PHP_EOL;
+	file_put_contents($FOLDER_LOG, $Escribir, FILE_APPEND);
+
+	$QUERY = str_ireplace(array('Delete','Drop','Insert','Show ','Truncate','Union','Update',';'),"",$QUERY);
+	try{
+		return $QUERY = $GLOBALS[$CON]->Query($QUERY);
+	}catch(PDOException $e){
+		$FOLDER_ERROR = Return_File_Path('SQL', "/Errores.txt");
+		$Escribir_error = date("Y-m-d H:i:s"). " -> ".ClientIP()." -> ".$GLOBALS['C_USER']['NAME']." -> ".basename($file)." -> ".$function." -> ".$args." -> ".$e->getMessage().PHP_EOL;
+		file_put_contents($FOLDER_ERROR, $Escribir_error, FILE_APPEND);
+		echo "No se pudo ejecutar la consulta";exit;		
+	}	
+} 
+function QueryUpdate($QUERY, $CON = 'QWE'){
+	if(!array_key_exists('NAME',$GLOBALS['C_USER'])){$GLOBALS['C_USER']['NAME'] = '';}
+	$file = array_column(debug_backtrace(),'file')[0];
+	$function = array_column(debug_backtrace(),'function')[0];
+	$args = array_column(debug_backtrace(),'args')[0][0];
+	$FOLDER_LOG = Return_File_Path('SQL', "/".basename($file).".txt");
+
+	$Escribir = date("Y-m-d H:i:s"). " -> ".ClientIP()." -> ".$GLOBALS['C_USER']['NAME']." -> ".$function." -> ".$args.PHP_EOL;
+	file_put_contents($FOLDER_LOG, $Escribir, FILE_APPEND);
+	
+	$QUERY = str_ireplace(array('Delete','Drop','Insert','Show ','Truncate','Union',';'),"",$QUERY);
+	try{
+		return $QUERY = $GLOBALS[$CON]->Query($QUERY);
+	}catch(PDOException $e){
+		$FOLDER_ERROR = Return_File_Path('SQL', "/Errores.txt");
+		$Escribir_error = date("Y-m-d H:i:s"). " -> ".ClientIP()." -> ".$GLOBALS['C_USER']['NAME']." -> ".basename($file)." -> ".$function." -> ".$args." -> ".$e->getMessage().PHP_EOL;
+		file_put_contents($FOLDER_ERROR, $Escribir_error, FILE_APPEND);
+		echo "No se pudo ejecutar la consulta";exit;
+	}	
+}
+function QueryFetch($Query){
+	if($Query){ return $Query->fetch();}
+}
+function QueryFetchAll($Query){
+	return $Query->fetchAll();
+}
+function QueryLastId($CON = 'QWE'){
+	return $GLOBALS[$CON]->lastInsertId();
+}
+function QueryNumRows($Query){
+	return $Query->rowCount();
+}
+?>

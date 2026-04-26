@@ -1,3 +1,0 @@
-<?php
-require_once './modulos/turneras/controlador_turneras.back';
-?>

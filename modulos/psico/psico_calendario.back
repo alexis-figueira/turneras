@@ -1,3 +1,0 @@
-<?php
-require_once './modulos/psico/controlador_psico.back';
-?>
