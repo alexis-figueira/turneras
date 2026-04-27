@@ -363,8 +363,7 @@ elseif($ROUTE_OPC == 'Listado_Turnos_Paciente'){ //REVISAR AL COMPLETAR TODO
 		$TMP = [];
 		$TMP['ID'] 						= $Row['id_turno'];
 		$TMP['DATA']['FECHA'] 			= Fecha_Formato($Row['fecha']);
-		$TMP['DATA']['HORA_INICIO']	 	= Hora_Formato($Row['horario_inicio']);
-		$TMP['DATA']['HORA_FIN']	 	= Hora_Formato($Row['horario_fin']);
+		$TMP['DATA']['HORARIO']	 		= Hora_Formato($Row['horario_inicio'])." - ".Hora_Formato($Row['horario_fin']);
 		$TMP['DATA']['ESTADO'] 			= $Row['estado'];
 		array_push($RETURN['ROWS'], $TMP);
 		unset($TMP);

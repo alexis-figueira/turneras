@@ -56,12 +56,12 @@ $TMP['MODAL']['SIZE']		= 'XL';
 
 $TMP['FOOTER']['CLOSE']		= array('ID' => 'Cerrar');
 
-$TMP['BODY'] = '<div class="card border-dark mx-auto mt-4 mb-0" style="width: 98%">';
-	$TMP['BODY'] .= '<div class="card-header card-main  gradient_card rounded-2 text-light" id="subcard-main" style="--bs-bg-opacity: .95;">';
+$TMP['BODY'] = '<div class="card border-dark mx-auto mt-2 mt-md-4 mb-0" style="width: 98%">';
+	$TMP['BODY'] .= '<div class="card-header card-main gradient_card rounded-2 text-light d-none d-md-block" id="subcard-main" style="--bs-bg-opacity: .95;">';
 		$TMP['BODY'] .= '<div class="d-grid gap-2 d-flex justify-content-center">';
 			$TMP['BODY'] .= '<ul class="nav nav-pills subtabs-buttons">';					
 				$TMP['BODY'] .= '<li class="nav-item nav-Ficha">';
-					$TMP['BODY'] .= '<button class="nav-link text-light mx-1" type="button" role="tab" aria-controls="FICHA" aria-selected="false">';
+					$TMP['BODY'] .= '<button class="nav-link active text-light mx-1" type="button" role="tab" aria-controls="FICHA" aria-selected="true">';
 						$TMP['BODY'] .= '<i class="fa-solid fa-calendar-days fa-lg"></i> <div class="d-inline-block"><span class="d-none d-xl-block text-center subcardcard_header_btn">Ficha</span></div>';									
 					$TMP['BODY'] .= '</button>';
 				$TMP['BODY'] .= '</li>';
@@ -69,21 +69,14 @@ $TMP['BODY'] = '<div class="card border-dark mx-auto mt-4 mb-0" style="width: 98
 		$TMP['BODY'] .= '</div>';
 	$TMP['BODY'] .= '</div>';
 	$TMP['BODY'] .= '<div class="card text-center border border-0">';
-		$TMP['BODY'] .= '<div class="card-body px-4 py-2 overflow-auto" id="subcardcard-body-main"> ';
+		$TMP['BODY'] .= '<div class="card-body px-2 px-md-4 py-2 overflow-auto" id="subcardcard-body-main"> ';
 			$TMP['BODY'] .= '<div class="tab-content subtabs-body">';			
-				$TMP['BODY'] .= '<div class="tab-pane fade" role="tabpanel" aria-labelledby="FICHA" tabindex="1">';
+				$TMP['BODY'] .= '<div class="tab-pane fade show active" role="tabpanel" aria-labelledby="FICHA" tabindex="1">';
 					$SUBTABLE_FICHA['COLUMNAS']			= array(
 						array('COLUMNA' => 'Paciente'),
-						array('COLUMNA' => 'Inicio'),
-						array('COLUMNA' => 'Fin'),
+						array('COLUMNA' => 'Horario'),
+						array('COLUMNA' => 'Valor'),
 						array('COLUMNA' => 'Estado'),
-						/* array('COLUMNA' => 'Afiliacion'),
-						array('COLUMNA' => 'Afiliado'),
-						array('COLUMNA' => 'DNI'),
-						array('COLUMNA' => 'Agenda'),
-						array('COLUMNA' => 'Hora'),
-						array('COLUMNA' => 'Turno'),
-						array('COLUMNA' => 'persona', 'DISPLAY' => 'NONE') */
 					);
 					$SUBTABLE_FICHA['AJAX_URL'] 		= $LINK_BACK.'/Listado_Turnos_Dia';
 					$SUBTABLE_FICHA['HERRAMIENTAS_NEW'] 	= array(
@@ -165,6 +158,7 @@ $JS_TMP .= '$(document).off("click","#TurneraCalendarBody td").on("click", "#Tur
 		$JS_TMP .= '$("#CALENDARIO_FORM #FECHA").val(dateValue);';
 		$JS_TMP .= 'let fecha = $("#CALENDARIO_FORM #FECHA").val().split("-");';
 		$JS_TMP .= '$("#MODAL_TURNOS .nav-Ficha .subcardcard_header_btn").html(fecha[2]+"/"+fecha[1]);';
+		$JS_TMP .= '$("#MODAL_TURNOS .modal-title").html("Ver Turnos - " + fecha[2]+"/"+fecha[1]+"/"+fecha[0]);';
 		$JS_TMP .= 'Display_Ver_Fecha();';
 	$JS_TMP .= '}';
 $JS_TMP .= '});';

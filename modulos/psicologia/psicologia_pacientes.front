@@ -135,7 +135,7 @@ if(in_array('Display_A_Ver', $TABLE_FUNCTION)){
 					$TMP['BODY'] .= '<div class="tab-pane fade" role="tabpanel" aria-labelledby="FICHA" tabindex="1">';
 						$SUBTABLE_FICHA['COLUMNAS']			= array(
 							array('COLUMNA' => 'Fecha'),
-							array('COLUMNA' => 'Hora'),
+							array('COLUMNA' => 'Horario'),
 							array('COLUMNA' => 'Estado'),
 						);
 						$SUBTABLE_FICHA['AJAX_URL'] 		= $LINK_BACK.'/Listado_Turnos_Paciente';
