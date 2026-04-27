@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS `psicologia__pacientes` (
     `nombre` VARCHAR(100) NOT NULL,
     `apellido` VARCHAR(100) NOT NULL,
     `telefono` VARCHAR(50) DEFAULT NULL,
-    `email` VARCHAR(150) DEFAULT NULL,
+    `correo` VARCHAR(150) DEFAULT NULL,
     `fecha_nacimiento` DATE DEFAULT NULL,
     `direccion` VARCHAR(255) DEFAULT NULL,
     `localidad` VARCHAR(100) DEFAULT NULL,
