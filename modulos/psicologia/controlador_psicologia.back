@@ -6,7 +6,8 @@ use Dompdf\Options;
 $PALETA_COLORES['ERROR'] 		= '#B39DDB'; //violeta
 $PALETA_COLORES['PASADO'] 		= '#A6A6A6'; // gris
 $PALETA_COLORES['HOY'] 			= '#FFD93D'; // Amarillo
-$PALETA_COLORES['DISPONIBLES'] 	= '#48C774'; // verde
+$PALETA_COLORES['VACIO'] 		= '#48C774'; // verde
+$PALETA_COLORES['AGENDADO'] 	= '#2E6E47'; // verde
 $PALETA_COLORES['COMPLETOS'] 	= '#FFD93D';//2E7D32 // Amarillo
 
 $CANCELAR_TURNO = 1; // HORAS DE ANTELACION PARA CANCELAR UN TURNO // DUPLICADO EN PORTAL
@@ -348,68 +349,51 @@ elseif($ROUTE_OPC == 'Ver_Calendario'){
 		$RETURN['DISPLAY_PERIODO'] = $CFG_CALENDARIO['MONTH'][$RETURN['DISPLAY_PERIODO']]." ".Fecha_Formato($sJ['CFA_PERIODO'], "Y");;
 	}	
 	
-	// $RETURN['CALENDARIO'] = generarSemanas($sJ['CFA_PERIODO'], ($ROUTE_ACT == 'TurnerasDas' ? true:false));
-	$RETURN['CALENDARIO'] = generarSemanas($sJ['CFA_PERIODO'], ($ROUTE_ACT == 'PsicologiaCalendario' ? true:false));
+	$RETURN['CALENDARIO'] = generarSemanas($sJ['CFA_PERIODO'], true);
 	
-	if(CIJE('CET_ID_CATEGORIA') === TRUE || CIJE('CTS_PROFESIONAL') === TRUE || !in_array($sJ['CET_ID_CATEGORIA'],$PERMISOS_C)){	EJE($RETURN);	};
+	$TURNOS_POR_DIA = array();
+	$QueFechas = QuerySelect("SELECT `fecha`, COUNT(*) AS 'turnos' FROM ".$DBT['TURNOS']." WHERE `estado` > 0 AND YEAR(`fecha`) = YEAR('".$sJ['CFA_PERIODO']."') AND MONTH(`fecha`) = MONTH('".$sJ['CFA_PERIODO']."') GROUP BY `fecha`");
 	
-	$AGENDAS = array();
-	$ID_AGENDAS = array();
+	if(QueryNumRows($QueFechas) > 0){
+		while($RowFechas = QueryFetch($QueFechas)){
+			$TURNOS_POR_DIA[$RowFechas['fecha']] = $RowFechas['turnos'];
+		}
+	}
 	
-	$QueFechas = QuerySelect("CALL ".ZXS_PORTAL_T.".`SP_Turnera_Calendario`('".$sJ['CFA_PERIODO']."','".$sJ['CTS_PROFESIONAL']."','".$sJ['CET_ID_CATEGORIA']."','MES');","QWE_PORTAL");
-	
-	if(QueryNumRows($QueFechas) < 1){ EJE($RETURN);}
-	while($RowFechas = QueryFetch($QueFechas)){
+	$fechaInicio = new DateTime($sJ['CFA_PERIODO']);
+	$diasEnMes = $fechaInicio->format('t');
+	$mes = $fechaInicio->format('m');
+	$anio = $fechaInicio->format('Y');
+
+	for ($dia = 1; $dia <= $diasEnMes; $dia++) {
+		$fechaActual = sprintf('%04d-%02d-%02d', $anio, $mes, $dia);
 		
-		if($RowFechas['feriado'] == 0){
-			if(!in_array($RowFechas['id_agenda'],$ID_AGENDAS)){$ID_AGENDAS[] = $RowFechas['id_agenda'];}
-			if(!array_key_exists($RowFechas['fecha'],$AGENDAS)){ $AGENDAS[$RowFechas['fecha']] = array();}
-			if(!array_key_exists('TURNOS',$AGENDAS[$RowFechas['fecha']])){$AGENDAS[$RowFechas['fecha']]['TURNOS'] = 0;$AGENDAS[$RowFechas['fecha']]['TITLE'] = '';}
-			$AGENDAS[$RowFechas['fecha']]['ERROR'] = FALSE;	
-			$AGENDAS[$RowFechas['fecha']]['TURNOS'] += $RowFechas['turnos'];
-			$AGENDAS[$RowFechas['fecha']]['TURNOS'] -= $RowFechas['turnos_tomados'];
-			$AGENDAS[$RowFechas['fecha']][$RowFechas['id_agenda']][$RowFechas['hora']] = $RowFechas['turnos'];
-			if($RowFechas['disponible'] == 1){				
-				if($RowFechas['turnos'] > $RowFechas['turnos_tomados']){
-					$AGENDAS[$RowFechas['fecha']]['TITLE'] .= ($sJ['CTS_PROFESIONAL'] == 0 ? $RowFechas['profesional'].' - ' : "").Hora_Formato($RowFechas['hora']).(($RowFechas['turnos']-$RowFechas['turnos_tomados']) > 1 ? ' ('.($RowFechas['turnos']-$RowFechas['turnos_tomados']).')' : '').'&#10;';
-				}
-			}else{
-				$AGENDAS[$RowFechas['fecha']]['TURNOS'] = $AGENDAS[$RowFechas['fecha']]['TURNOS'] - ($RowFechas['turnos'] - $RowFechas['turnos_tomados']);
+		$COLOR = 'VACIO';
+		$TITLE = '';
+		
+		$cantidadTurnos = isset($TURNOS_POR_DIA[$fechaActual]) ? $TURNOS_POR_DIA[$fechaActual] : 0;
+
+		if ($fechaActual < date("Y-m-d")) {
+			$COLOR = 'PASADO';
+			if ($cantidadTurnos > 0) {
+				$TITLE = $cantidadTurnos.' turno(s)';
 			}
-		}		
-	}
-	$QueFechas->closeCursor();
-	
-	$QueTurnos = QuerySelect("SELECT T.`id_agenda`,T.`fecha`,T.`horario`,COUNT(*) AS 'turnos' FROM ".$DBT['TURNERAS_TURNOS']." T LEFT JOIN ".$DBT['TURNERAS_AGENDAS']." A ON T.`id_agenda`=A.`id_agenda` WHERE YEAR(T.`fecha`) = YEAR('".$sJ['CFA_PERIODO']."') AND MONTH(T.`fecha`) = MONTH('".$sJ['CFA_PERIODO']."') AND T.`estado` > 0 AND A.`id_categoria`='".$sJ['CET_ID_CATEGORIA']."'".($sJ['CTS_PROFESIONAL'] != 0 ? " AND T.`id_agenda` = '".$sJ['CTS_PROFESIONAL']."'" : "")." GROUP BY T.`id_agenda`,T.`fecha`,T.`horario`","QWE_PORTAL");
-	if(QueryNumRows($QueTurnos) > 0){
-		while($RowTurnos = QueryFetch($QueTurnos)){
-			if(
-				!array_key_exists($RowTurnos['fecha'],$AGENDAS) ||
-				!array_key_exists($RowTurnos['id_agenda'],$AGENDAS[$RowTurnos['fecha']]) ||
-				!array_key_exists($RowTurnos['horario'],$AGENDAS[$RowTurnos['fecha']][$RowTurnos['id_agenda']]) ||
-				$AGENDAS[$RowTurnos['fecha']][$RowTurnos['id_agenda']][$RowTurnos['horario']] < $RowTurnos['turnos']
-			){
-				$AGENDAS[$RowTurnos['fecha']]['ERROR'] = TRUE;
+		} elseif ($fechaActual == date("Y-m-d")) {
+			$COLOR = 'HOY';
+			$TITLE = 'HOY';
+			if ($cantidadTurnos > 0) {
+				$TITLE .= ' - '.$cantidadTurnos.' turno(s)';
 			}
+		} elseif ($cantidadTurnos > 0) {
+			$COLOR = 'AGENDADO';
+			$TITLE = $cantidadTurnos . ' turno(s)';
+		}
+		
+		if($COLOR != ''){
+			Update_Fecha($RETURN['CALENDARIO'], (string)$dia, $PALETA_COLORES[$COLOR], $TITLE, $fechaActual);
 		}
 	}
 	
-	if(count($AGENDAS)){
-		foreach($AGENDAS as $KEY => $VALUE){		
-			$COLOR = '';
-			$TITLE = '';
-			$CLICK = '';
-			
-			if($KEY < date("Y-m-d")){ 									$COLOR = 'PASADO';			$TITLE = 'FECHA PASADA';									}
-			elseif($VALUE['ERROR'] == TRUE){							$COLOR = 'ERROR';			$TITLE = 'AL MENOS UN TURNO ES INVALIDO!';	$CLICK = $KEY;	}
-			elseif($VALUE['TURNOS'] < 0){								$COLOR = 'ERROR';			$TITLE = 'AL MENOS UN TURNO ES INVALIDO!!';	$CLICK = $KEY;	}
-			elseif($VALUE['TURNOS'] == 0){ 								$COLOR = 'COMPLETOS'; 		$TITLE = 'SIN TURNOS'; 										}
-			elseif($VALUE['TURNOS'] > 0){ 								$COLOR = 'DISPONIBLES'; 	$TITLE = $VALUE['TITLE']; 					$CLICK = $KEY;	}
-			else{ continue; }
-			if($ROUTE_ACT == 'TurnerasCalendario'){$CLICK = $KEY;}
-			if($COLOR != ''){ Update_Fecha($RETURN['CALENDARIO'], Fecha_Formato($KEY,"d"), $PALETA_COLORES[$COLOR],$TITLE, $CLICK);	}
-		}
-	}
 	EJE($RETURN);
 }
 else{

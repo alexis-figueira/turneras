@@ -134,11 +134,17 @@ $JS_TMP .= 'async function Procesar_A_Ver(){';
 			$JS_TMP .= 'addedCells++;';
 		$JS_TMP .= '}';
 		$JS_TMP .= '$.each(dias, function(dia, data) {';
-			$JS_TMP .= 'let cell = $("<td></td>").text(data.FECHA);';			
+			$JS_TMP .= 'let cell = $("<td style=\'position: relative;\'></td>").html("<b>"+data.FECHA+"</b>");';			
 			$JS_TMP .= 'if (data.CLICK != "") {';
-				$JS_TMP .= 'if (data.CLICK == '.date("Y-m-d").') { cell.css("background-color", "#FFD93D"); }';
 				$JS_TMP .= 'cell.attr("data-click", data.CLICK);';
 			$JS_TMP .= '}';			
+			$JS_TMP .= 'if (data.COLOR != "") {';
+				$JS_TMP .= 'cell.css("background-color", data.COLOR);';
+			$JS_TMP .= '}';
+			$JS_TMP .= 'if (data.TITLE != "") {';
+				$JS_TMP .= 'cell.attr("title", data.TITLE);';
+				$JS_TMP .= 'cell.append("<div style=\'position: absolute; bottom: 5px; left: 0; right: 0; font-size: 0.75rem; font-weight: normal;\'>" + data.TITLE + "</div>");';
+			$JS_TMP .= '}';
 			$JS_TMP .= 'cell.attr("data-date", data.FECHA);';
 			$JS_TMP .= 'row.append(cell);';
 			$JS_TMP .= 'addedCells++;';
@@ -204,7 +210,6 @@ if(in_array('Display_Alta', $TABLE_FUNCTION)){
 		$JS_TMP .= 'inicializarSelect2("#ID_PACIENTE", "#MODAL_ALTA", "'.$LINK_BACK.'/DL_Pacientes", "Pacientes", 2);';
 		$JS_TMP .= '$("#ALTA_FORM #FECHA_TURNO").val($("#CALENDARIO_FORM #FECHA").val());';
 		$JS_TMP .= '$("#MODAL_ALTA #AUTOFOCUS").val("PACIENTE");';
-		// $JS_TMP .= 'Procesar_A_Ver();';
 		$JS_TMP .= 'MODAL_ALTA_INSTANCE.show();';
 	$JS_TMP .= '}';
 	
@@ -214,6 +219,7 @@ if(in_array('Display_Alta', $TABLE_FUNCTION)){
 		$JS_TMP .= 'if(response.RESULTADO == "OK"){';
 			$JS_TMP .= 'await TableLoad("FICHA", response.MESSAGE);';
 			$JS_TMP .= 'MODAL_ALTA_INSTANCE.hide();';
+			$JS_TMP .= 'Procesar_A_Ver();';
 			$JS_TMP .= SF('OK');
 		$JS_TMP .= '}else{';
 			$JS_TMP .= 'if(response.MESSAGE != ""){'.SF('MSG', 'response.MESSAGE').'}';
