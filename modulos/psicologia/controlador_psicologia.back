@@ -315,27 +315,56 @@ elseif($ROUTE_OPC == 'DL_Pacientes'){
 }
 elseif($ROUTE_OPC == 'Procesar_Turno'){
 	if($PP['A'] == 0){RJRE("Permiso denegado");}
-	
+	if(CIJE('CEI_ID_TURNO') === TRUE){RJRE("No se pudo procesar el identificador del turno.");};
 	if(CIJE('CEI_ID_PACIENTE') === TRUE){RJRE("No se pudo procesar el identificador del afiliado.");};
 	if(CIJE('CFA_FECHA_TURNO') === TRUE){RJRE("No se pudo procesar la fecha del turno.");};
-	if(CIJE('CHA_HORA_INICIO') === TRUE){RJRE("No se pudo procesar el horario de inicio.");};
-	if(CIJE('CHA_HORA_FINAL') === TRUE){RJRE("No se pudo procesar el horario final.");};
+	if(CIJE('CHA_HORARIO_INICIO') === TRUE){RJRE("No se pudo procesar el horario de inicio.");};
+	if(CIJE('CHA_HORARIO_FIN') === TRUE){RJRE("No se pudo procesar el horario final.");};
 	if(CIJE('CEI_VALOR') === TRUE){RJRE("No se pudo procesar el horario final.");};
-	if($sJ['CFA_FECHA_TURNO'] < date("Y-m-d")){ RJRE("Ingreso Manual. Fecha Invalida"); }
-	if(strtotime($sJ['CHA_HORA_FINAL']) <= strtotime($sJ['CHA_HORA_INICIO'])){ RJRE("El horario final no puede ser mayor al incio de la sesión."); }
-
+	if($sJ['CFA_FECHA_TURNO'] < date("Y-m-d")){ RJRE("Ya pasó la fecha seleccioada."); }
+	if(strtotime($sJ['CHA_HORARIO_FIN']) <= strtotime($sJ['CHA_HORARIO_INICIO'])){ RJRE("El horario final no puede ser mayor al incio de la sesión."); }
 
 	$QuePaciente = QuerySelect("SELECT `id_paciente` FROM ".$DBT['PACIENTES']." WHERE `id_paciente`='".$sJ['CEI_ID_PACIENTE']."' AND `estado` = '1'");
-	if(QueryNumRows($QuePaciente) < 1){ RJRE("El afiliado no es valido o no se encuentra activo."); }
+	if(QueryNumRows($QuePaciente) < 1){ RJRE("El paciente no es valido o no se encuentra activo."); }
 	
-	$QueHorario = QuerySelect("SELECT `id_turno`, `horario_inicio`,`horario_fin` FROM ".$DBT['TURNOS']." WHERE `fecha` = '".$sJ['CFA_FECHA_TURNO']."' AND (`horario_inicio` < '".$sJ['CHA_HORA_FINAL']."' AND `horario_fin` > '".$sJ['CHA_HORA_INICIO']."') AND `estado` != '0'");
-	if(QueryNumRows($QueHorario) >= 1){
-		while($RowHorario = QueryFetch($QueHorario)){
-			RJRE("Hay un turno de ".$RowHorario['horario_inicio']." a ".$RowHorario['horario_fin']." que se superpone con el horario ingresado para el dia ".$sJ['CFA_FECHA_TURNO'].".");
+	$ESTADO_NUEVO = json_encode(array(
+		'id_paciente' => $sJ['CEI_ID_PACIENTE'],
+		'fecha' => $sJ['CFA_FECHA_TURNO'],
+		'horario_inicio' => $sJ['CHA_HORARIO_INICIO'],
+		'horario_fin' => $sJ['CHA_HORARIO_FIN'],
+		'valor_sesion' => $sJ['CEI_VALOR'],
+		'estado' => '1'
+	));
+	
+	$ESTADO_ANTERIOR = null;
+	$AUDIT_ACCION = 'Alta';
+	$AUDIT_ID = 0;
+
+	if($sJ['CEI_ID_TURNO'] == 0){
+		$QueHorario = QuerySelect("SELECT `id_turno`, `horario_inicio`,`horario_fin`, `estado` FROM ".$DBT['TURNOS']." WHERE `fecha` = '".$sJ['CFA_FECHA_TURNO']."' AND (`horario_inicio` < '".$sJ['CHA_HORARIO_FIN']."' AND `horario_fin` > '".$sJ['CHA_HORARIO_INICIO']."') AND `estado` != '0'");
+		if(QueryNumRows($QueHorario) >= 1){
+			while($RowHorario = QueryFetch($QueHorario)){
+				RJRE("Hay un turno de ".$RowHorario['horario_inicio']." a ".$RowHorario['horario_fin']." que se superpone con el horario ingresado para el dia ".$sJ['CFA_FECHA_TURNO'].".");
+			}
 		}
+		QueryInsert("INSERT INTO ".$DBT['TURNOS']."(`id_paciente`, `fecha`, `horario_inicio`, `horario_fin`, `valor_sesion`, `estado`, `reg_user`, `reg_fecha`) VALUES ('".$sJ['CEI_ID_PACIENTE']."','".$sJ['CFA_FECHA_TURNO']."','".$sJ['CHA_HORARIO_INICIO']."','".$sJ['CHA_HORARIO_FIN']."','".$sJ['CEI_VALOR']."','1','".$C_USER['ID']."',NOW())");
+		$AUDIT_ID = QueryLastId();
+	}
+	else{
+		$QueTurno = QuerySelect("SELECT `id_turno`, `id_paciente`, `horario_inicio`, `horario_fin`, `valor_sesion`, `estado`, `fecha`,`observaciones`  FROM ".$DBT['TURNOS']." WHERE `id_turno` = ".$sJ['CEI_ID_TURNO']." OR (`fecha` = '".$sJ['CFA_FECHA_TURNO']."' AND (`horario_inicio` < '".$sJ['CHA_HORARIO_FIN']."' AND `horario_fin` > '".$sJ['CHA_HORARIO_INICIO']."') ) AND `estado` != 0");
+		while($RowTurno = QueryFetch($QueTurno)){
+			if($RowTurno['id_turno'] != $sJ['CEI_ID_TURNO']){RJRE("EDITAR Hay un turno de ".$RowTurno['horario_inicio']." a ".$RowTurno['horario_fin']." que se superpone con el horario ingresado para el dia ".$sJ['CFA_FECHA_TURNO'].".");}
+			if($RowTurno['estado'] == '0'){RJRE("El turno ya se encuentra anulado.");}
+			if($RowTurno['estado'] != '1'){RJRE("Ya se marco la asistencia del turno.");}
+			$ESTADO_ANTERIOR = json_encode($RowTurno);
+		}
+		QueryUpdate("UPDATE ".$DBT['TURNOS']." SET `id_paciente` = '".$sJ['CEI_ID_PACIENTE']."', `fecha` = '".$sJ['CFA_FECHA_TURNO']."', `horario_inicio` = '".$sJ['CHA_HORARIO_INICIO']."', `horario_fin` = '".$sJ['CHA_HORARIO_FIN']."', `valor_sesion` = '".$sJ['CEI_VALOR']."', `estado` = '1' WHERE `id_turno` = '".$sJ['CEI_ID_TURNO']."'");
+		$AUDIT_ID = $sJ['CEI_ID_TURNO'];
+		$AUDIT_ACCION = 'Edit';
 	}
 	
-	QueryInsert("INSERT INTO ".$DBT['TURNOS']."(`id_paciente`, `fecha`, `horario_inicio`, `horario_fin`, `valor_sesion`, `estado`, `reg_user`, `reg_fecha`) VALUES ('".$sJ['CEI_ID_PACIENTE']."','".$sJ['CFA_FECHA_TURNO']."','".$sJ['CHA_HORA_INICIO']."','".$sJ['CHA_HORA_FINAL']."','".$sJ['CEI_VALOR']."','1','".$C_USER['ID']."',NOW())");
+	$ESTADO_ANTERIOR_SQL = $ESTADO_ANTERIOR ? "'".$ESTADO_ANTERIOR."'" : "NULL";
+	QueryInsert("INSERT INTO ".$DBT['AUDITORIA']." (`tabla_afectada`, `registro_id`, `accion`, `estado_anterior`, `estado_nuevo`, `usuario_id`, `fecha`) VALUES ('".$DBT['TURNOS']."', '".$AUDIT_ID."', '".$AUDIT_ACCION."', ".$ESTADO_ANTERIOR_SQL.", '".$ESTADO_NUEVO."', '".$C_USER['ID']."', NOW())");
 	RJRO();
 	
 }
@@ -395,6 +424,56 @@ elseif($ROUTE_OPC == 'Ver_Calendario'){
 	}
 	
 	EJE($RETURN);
+}
+elseif($ROUTE_OPC == 'Ver_Turno'){
+	$RETURN['ID_TURNO'] = '0';
+	if($PP['C'] != 1){EJE($RETURN);}	
+	if(CIJE('CEI_ID_TURNO') === TRUE){EJE($RETURN);};
+	
+	$Que = QuerySelect("SELECT T.`id_turno`, T.`id_paciente`, CONCAT( P.`apellido`, ', ', P.`nombre`) AS 'paciente',T.`horario_inicio`, T.`horario_fin`, T.`valor_sesion`  FROM ".$DBT['TURNOS']." T LEFT JOIN ".$DBT['PACIENTES']." P ON T.`id_paciente` = P.`id_paciente` WHERE T.`id_turno` = ".$sJ['CEI_ID_TURNO']." AND T.`estado` = '1'");
+	if(QueryNumRows($Que) > 0){
+		while($Row = QueryFetch($Que)){
+			$RETURN['ID_TURNO']			= $Row['id_turno'];
+			$RETURN['ID_PACIENTE'] 		= $Row['id_paciente'];
+			$RETURN['PACIENTE'] 		= $Row['paciente'];
+			$RETURN['HORARIO_INICIO'] 	= $Row['horario_inicio'];
+			$RETURN['HORARIO_FIN'] 		= $Row['horario_fin'];
+			$RETURN['VALOR_SESION'] 	= $Row['valor_sesion'];
+		}
+	}
+	EJE($RETURN);
+}
+elseif($ROUTE_OPC == 'Ver_Turno_Status'){
+	$RETURN['ID_TURNO'] = 0;
+	if($PP['M'] != 1){EJE($RETURN);}
+	if(CIJE('CEI_ID_TURNO') === TRUE){EJE($RETURN);};
+	
+	$Que = QuerySelect("SELECT `id_turno`, `observaciones`, `estado` FROM ".$DBT['TURNOS']." WHERE `id_turno`='".$sJ['CEI_ID_TURNO']."' AND `estado`!= '0'");
+	if(QueryNumRows($Que) > 0){
+		while($Row = QueryFetch($Que)){
+			$RETURN['ID_TURNO'] = $Row['id_turno'];
+			$RETURN['MOTIVO'] 	= $Row['observaciones'];
+			$RETURN['ESTADO'] 	= $Row['estado'];
+		}
+	}
+	EJE($RETURN);
+}
+elseif($ROUTE_OPC == 'Procesar_Turno_Estado'){
+	if($PP['M'] == 0){RJRE("Permiso denegado");}
+	if(CIJE('CEI_ID_TURNO') === TRUE){RJRE("No se pudo procesar el identificador del turno");};
+	if(CIJE('CET_ESTADO') === TRUE){RJRE("No se pudo procesar el identificador del estado");};
+	if(CIJE('CTS_MOTIVO') === TRUE){ $sJ['CTS_MOTIVO'] = NULL;};	
+	$Que = QuerySelect("SELECT `id_turno`, `observaciones`, `fecha`, `estado` FROM ".$DBT['TURNOS']." WHERE `id_turno` = '".$sJ['CEI_ID_TURNO']."'");
+	// $Que = QuerySelect("SELECT T.`id_turno`,T.`motivo`, T.`fecha`,T.`estado` FROM ".$DBT['TURNERAS_TURNOS']." T JOIN ".$DBT['TURNERAS_AGENDAS']." A ON A.`id_agenda`=A.`id_agenda` WHERE T.`id_turno`='".$sJ['CEI_ID_TURNO']."' AND A.`id_categoria` IN (".implode(",", $PERMISOS_M).")", "QWE_PORTAL");
+	if(QueryNumRows($Que) < 1){RJRE("El turno no se pudo identificar o no esta disponible");}
+	while($Row = QueryFetch($Que)){
+		if($Row['estado'] == 0){ RJRE("No se puede modificar un turno anulado"); }
+		if($Row['fecha'] > date("Y-m-d") && $sJ['CET_ESTADO'] != 1){ RJRE("No se puede modificar un turno antes de tiempo"); }
+		if($Row['estado'] != $sJ['CET_ESTADO'] || $Row['obsercaciones'] != $sJ['CTS_MOTIVO']){
+			QueryUpdate("UPDATE ".$DBT['TURNOS']." SET `observaciones`=".QueryValue($sJ['CTS_MOTIVO']).",`estado`='".$sJ['CET_ESTADO']."' WHERE `id_turno`='".$sJ['CEI_ID_TURNO']."'");
+		}
+	}	
+	RJRO($sJ['CEI_ID_TURNO']);
 }
 else{
 	EE("NO_SE_PUEDE_PROCESAR_LA_SOLICITUD");
