@@ -459,7 +459,7 @@ elseif($ROUTE_OPC == 'Ver_Calendario'){
 }
 elseif($ROUTE_OPC == 'Ver_Turno'){
 	$RETURN['ID_TURNO'] = '0';
-	 $RETURN['MENSAJE'] = 'No se encontró el turno;' ;
+	$RETURN['MENSAJE'] = 'No se encontró el turno;' ;
 	if($PP['C'] != 1){EJE($RETURN);}	
 	if(CIJE('CEI_ID_TURNO') === TRUE){EJE($RETURN);};
 	
@@ -473,6 +473,22 @@ elseif($ROUTE_OPC == 'Ver_Turno'){
 			$RETURN['PACIENTE'] 		= $Row['paciente'];
 			$RETURN['HORARIO_INICIO'] 	= $Row['horario_inicio'];
 			$RETURN['HORARIO_FIN'] 		= $Row['horario_fin'];
+			$RETURN['VALOR_SESION'] 	= $Row['valor_sesion'];
+		}
+	}
+	EJE($RETURN);
+}
+elseif($ROUTE_OPC == 'Ver_Valor'){
+	$RETURN['ID_TURNO'] = '0';
+	$RETURN['MENSAJE'] = 'No se encontró el turno;' ;
+	if($PP['C'] != 1){EJE($RETURN);}	
+	if(CIJE('CEI_ID_TURNO') === TRUE){EJE($RETURN);};
+	
+	$Que = QuerySelect("SELECT `id_turno`, `valor_sesion` FROM ".$DBT['TURNOS']." WHERE `id_turno` = ".$sJ['CEI_ID_TURNO']." AND `estado` != '0'");
+	// $Que = QuerySelect("SELECT T.`id_turno`, T.`id_paciente`, CONCAT( P.`apellido`, ', ', P.`nombre`) AS 'paciente',T.`horario_inicio`, T.`horario_fin`, T.`valor_sesion`, T.`estado` FROM ".$DBT['TURNOS']." T LEFT JOIN ".$DBT['PACIENTES']." P ON T.`id_paciente` = P.`id_paciente` WHERE T.`id_turno` = ".$sJ['CEI_ID_TURNO']." AND T.`estado` != '0'");
+	if(QueryNumRows($Que) > 0){
+		while($Row = QueryFetch($Que)){
+			$RETURN['ID_TURNO']			= $Row['id_turno'];
 			$RETURN['VALOR_SESION'] 	= $Row['valor_sesion'];
 		}
 	}
