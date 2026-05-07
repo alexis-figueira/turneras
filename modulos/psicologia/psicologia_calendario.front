@@ -76,7 +76,8 @@ $TMP['BODY'] = '<div class="card border-dark mx-auto mt-2 mt-md-4 mb-0" style="w
 						array('COLUMNA' => 'Paciente'),
 						array('COLUMNA' => 'Horario'),
 						array('COLUMNA' => 'Valor'),
-						array('COLUMNA' => 'Estado'),
+						array('COLUMNA' => '<i class="fa-solid fa-user"></i>', 'DB' => 'ESTADO'),
+						
 					);
 					$SUBTABLE_FICHA['AJAX_URL'] 		= $LINK_BACK.'/Listado_Turnos_Dia';
 					$SUBTABLE_FICHA['HERRAMIENTAS_NEW'] 	= array(
@@ -208,18 +209,17 @@ if(in_array('Display_Alta', $TABLE_FUNCTION)){
 	$JS_TMP = 'async function Display_Alta(){';
 		$JS_TMP .= 'FormErrorReset("ALTA_FORM");';
 		$JS_TMP .= 'FormReset("ALTA_FORM");';
+		$JS_TMP .= '$("#TITLE_ALTA").text("NUEVO TURNO");';
 		$JS_TMP .= 'if($("#Table_FICHA_row").val() >= 1){';
 			$JS_TMP .= 'const response = await $.ajax({ url: "'.$LINK_BACK.'/Ver_Turno/", data: JSON.stringify( {CEI_ID_TURNO: $("#Table_FICHA_row").val()} )});';
-			$JS_TMP .= 'if(response.ID_TURNO != "0"){';
+			$JS_TMP .= 'if(response.ID_TURNO == "0"){ '.SF('MSG', 'response.MENSAJE').' ; return; }';
+			$JS_TMP .= '$("#TITLE_ALTA").text("MODIFICAR TURNO");';
 			$JS_TMP .= 'let paciente = new Option(response.PACIENTE, response.ID_PACIENTE, true, true);';
 			$JS_TMP .= '$("#ALTA_FORM #ID_PACIENTE").append(paciente).trigger("change");';	
 			$JS_TMP .= '$("#ALTA_FORM #ID_TURNO").val(response.ID_TURNO);';
 			$JS_TMP .= '$("#ALTA_FORM #VALOR").val(response.VALOR_SESION);';
 			$JS_TMP .= '$("#ALTA_FORM #HORARIO_INICIO").val(response.HORARIO_INICIO);';
 			$JS_TMP .= '$("#ALTA_FORM #HORARIO_FIN").val(response.HORARIO_FIN);';
-			$JS_TMP .= '}';
-			$JS_TMP .= 'else{}';
-			
 		$JS_TMP .= '}';
 		$JS_TMP .= 'inicializarSelect2("#ID_PACIENTE", "#MODAL_ALTA", "'.$LINK_BACK.'/DL_Pacientes", "Pacientes", 2);';
 		$JS_TMP .= '$("#ALTA_FORM #FECHA_TURNO").val($("#CALENDARIO_FORM #FECHA").val());';

@@ -151,7 +151,7 @@ function create_pdf_ticket($TURNO){ // TIENE CAMBIOS
 	$HTML .= '</html>';
 	return $HTML;
 }
-function Estados($ESTADO, $METODO = NULL, $MOTIVO = NULL){
+function Estados2($ESTADO, $METODO = NULL, $MOTIVO = NULL){
 	if($METODO == 0){ $METODO = '-PORTAL';}else{ $METODO = '';}
 	if($MOTIVO != NULL) { $INFO = ' - <i class="fa-solid fa-triangle-exclamation fa-lg" style="color:Orange" title="'.$MOTIVO.'"></i>'; }else{ $INFO = ''; }
 	if($ESTADO == 0){ return 'ANULADO'.$METODO.' <i class="fa-solid fa-circle-xmark fa-lg" style="color:red"></i>'.$INFO;}
@@ -160,6 +160,21 @@ function Estados($ESTADO, $METODO = NULL, $MOTIVO = NULL){
 	elseif($ESTADO == 11){ return 'PRESENTE <i class="fa-solid fa-circle-check fa-lg" style="color:green"></i>'.$INFO;}
 	else {return '';}
 }
+function Update_Fecha(&$calendario, $dia, $color, $title, $fecha) {
+    foreach ($calendario as $semana => &$dias) {
+        foreach ($dias as $diaSemana => &$datos) {
+            if (isset($datos['FECHA']) && $datos['FECHA'] == $dia) {
+                $datos['COLOR'] = $color;
+                $datos['TITLE'] = $title;
+                $datos['CLICK'] = $fecha;
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+//Funciones mias
 function generarSemanas($fechaInicio, $click = false) {
     $fecha = new DateTime($fechaInicio);
     $diasEnMes = $fecha->format('t');
@@ -183,19 +198,29 @@ function generarSemanas($fechaInicio, $click = false) {
     }    
     return $semanas;
 }
-function Update_Fecha(&$calendario, $dia, $color, $title, $fecha) {
-    foreach ($calendario as $semana => &$dias) {
-        foreach ($dias as $diaSemana => &$datos) {
-            if (isset($datos['FECHA']) && $datos['FECHA'] == $dia) {
-                $datos['COLOR'] = $color;
-                $datos['TITLE'] = $title;
-                $datos['CLICK'] = $fecha;
-                return true;
-            }
-        }
-    }
-    return false;
+function Estados($ESTADO, $MOTIVO = NULL){
+	if($MOTIVO != NULL) { $INFO = ' - <i class="fa-solid fa-triangle-exclamation fa-lg" style="color:Orange" title="'.$MOTIVO.'"></i>'; }else{ $INFO = ''; }
+
+	if($ESTADO == 0){ 		return 	'<i class="fa-solid fa-user-xmark fa-lg" style="color:red" 		title="ANULADO"></i>'.$INFO;}
+	elseif($ESTADO == 1){	return	'<i class="fa-solid fa-user-minus fa-lg" style="color:grey"		title="RESERVADO"></i>'.$INFO;}
+	elseif($ESTADO == 10){ 	return 	'<i class="fa-solid fa-user-xmark fa-lg" style="color:purple"		title="AUSENTE"></i>'.$INFO;}
+	elseif($ESTADO == 11){ 	return 	'<i class="fa-solid fa-user-check fa-lg" style="color:green"	title="PRESENTE"></i>'.$INFO;}
+	else {return '';}
+	
+	
+	// if($ESTADO == 0){ return 'ANULADO <i class="fa-solid fa-circle-xmark fa-lg" style="color:red"></i>'.$INFO;}
+	// elseif($ESTADO == 1){ return 'RESERVADO <i class="fa-solid fa-circle fa-lg" style="color:grey"></i>'.$INFO;}
+	// elseif($ESTADO == 10){ return 'AUSENTE <i class="fa-solid fa-circle-xmark fa-lg" style="color:purple"></i>'.$INFO;}
+	// elseif($ESTADO == 11){ return 'PRESENTE <i class="fa-solid fa-circle-check fa-lg" style="color:green"></i>'.$INFO;}
+	// else {return '';}
 }
+function RegistrarAuditoria($tabla, $registro_id, $accion, $estado_anterior, $estado_nuevo) {
+    global $DBT, $C_USER;
+    $estado_anterior_sql = $estado_anterior ? QueryValue(json_encode($estado_anterior)) : "NULL";
+    $estado_nuevo_sql = $estado_nuevo ? QueryValue(json_encode($estado_nuevo)) : "NULL";
+    QueryInsert("INSERT INTO ".$DBT['AUDITORIA']." (`tabla_afectada`, `registro_id`, `accion`, `estado_anterior`, `estado_nuevo`, `usuario_id`, `fecha`) VALUES ('".$tabla."', '".$registro_id."', '".$accion."', ".$estado_anterior_sql.", ".$estado_nuevo_sql.", '".$C_USER['ID']."', NOW())");
+}
+
 /* En caso de actualizacion de los template modificar portal de afiliados */ 
 function TemplateAlta($AFILIADO,$TURNO, $TURNERA, $MENSAJE){
 	$RETURN = '<div style="width:450px;border: 5px solid #27AE98; padding:20px;" align="center">';
@@ -260,7 +285,7 @@ if($ROUTE_OPC == 'Listado_Turnos_Dia'){
 		$TMP['DATA']['PACIENTE'] 		= $Row['paciente'];
 		$TMP['DATA']['HORARIO'] 		= Hora_Formato($Row['horario_inicio'])." - ".Hora_Formato($Row['horario_fin']);
 		$TMP['DATA']['VALOR'] 			= "$".$Row['valor_sesion'];
-		$TMP['DATA']['ESTADO'] 			= $Row['estado'];
+		$TMP['DATA']['ESTADO'] 			= Estados($Row['estado']);
 		array_push($RETURN['ROWS'], $TMP);
 		unset($TMP);
 	}	
@@ -327,18 +352,17 @@ elseif($ROUTE_OPC == 'Procesar_Turno'){
 	$QuePaciente = QuerySelect("SELECT `id_paciente` FROM ".$DBT['PACIENTES']." WHERE `id_paciente`='".$sJ['CEI_ID_PACIENTE']."' AND `estado` = '1'");
 	if(QueryNumRows($QuePaciente) < 1){ RJRE("El paciente no es valido o no se encuentra activo."); }
 	
-	$ESTADO_NUEVO = json_encode(array(
-		'id_paciente' => $sJ['CEI_ID_PACIENTE'],
-		'fecha' => $sJ['CFA_FECHA_TURNO'],
-		'horario_inicio' => $sJ['CHA_HORARIO_INICIO'],
-		'horario_fin' => $sJ['CHA_HORARIO_FIN'],
-		'valor_sesion' => $sJ['CEI_VALOR'],
-		'estado' => '1'
-	));
-	
 	$ESTADO_ANTERIOR = null;
-	$AUDIT_ACCION = 'Alta';
-	$AUDIT_ID = 0;
+	$ESTADO_NUEVO = array(
+		'id_turno' 		=> $sJ['CEI_ID_TURNO'],
+		'id_paciente' 	=> $sJ['CEI_ID_PACIENTE'],
+		'fecha' 		=> $sJ['CFA_FECHA_TURNO'],
+		'horario_inicio'=> $sJ['CHA_HORARIO_INICIO'],
+		'horario_fin' 	=> $sJ['CHA_HORARIO_FIN'],
+		'valor_sesion' 	=> $sJ['CEI_VALOR'],
+		'estado' 		=> '1',
+		'observaciones' => null
+	);
 
 	if($sJ['CEI_ID_TURNO'] == 0){
 		$QueHorario = QuerySelect("SELECT `id_turno`, `horario_inicio`,`horario_fin`, `estado` FROM ".$DBT['TURNOS']." WHERE `fecha` = '".$sJ['CFA_FECHA_TURNO']."' AND (`horario_inicio` < '".$sJ['CHA_HORARIO_FIN']."' AND `horario_fin` > '".$sJ['CHA_HORARIO_INICIO']."') AND `estado` != '0'");
@@ -348,25 +372,33 @@ elseif($ROUTE_OPC == 'Procesar_Turno'){
 			}
 		}
 		QueryInsert("INSERT INTO ".$DBT['TURNOS']."(`id_paciente`, `fecha`, `horario_inicio`, `horario_fin`, `valor_sesion`, `estado`, `reg_user`, `reg_fecha`) VALUES ('".$sJ['CEI_ID_PACIENTE']."','".$sJ['CFA_FECHA_TURNO']."','".$sJ['CHA_HORARIO_INICIO']."','".$sJ['CHA_HORARIO_FIN']."','".$sJ['CEI_VALOR']."','1','".$C_USER['ID']."',NOW())");
-		$AUDIT_ID = QueryLastId();
+		$ESTADO_NUEVO['id_turno'] = QueryLastId();
+		RegistrarAuditoria($DBT['TURNOS'], $ESTADO_NUEVO['id_turno'], 'Alta turno', null, $ESTADO_NUEVO);
 	}
 	else{
-		$QueTurno = QuerySelect("SELECT `id_turno`, `id_paciente`, `horario_inicio`, `horario_fin`, `valor_sesion`, `estado`, `fecha`,`observaciones`  FROM ".$DBT['TURNOS']." WHERE `id_turno` = ".$sJ['CEI_ID_TURNO']." OR (`fecha` = '".$sJ['CFA_FECHA_TURNO']."' AND (`horario_inicio` < '".$sJ['CHA_HORARIO_FIN']."' AND `horario_fin` > '".$sJ['CHA_HORARIO_INICIO']."') ) AND `estado` != 0");
+		$QueTurno = QuerySelect("SELECT `id_turno`, `id_paciente`, `horario_inicio`, `horario_fin`, `valor_sesion`, `estado`, `fecha`,`observaciones`  FROM ".$DBT['TURNOS']." WHERE (`id_turno` = ".$sJ['CEI_ID_TURNO'].") OR (`fecha` = '".$sJ['CFA_FECHA_TURNO']."' AND (`horario_inicio` < '".$sJ['CHA_HORARIO_FIN']."' AND `horario_fin` > '".$sJ['CHA_HORARIO_INICIO']."') AND `estado` != 0)");
 		while($RowTurno = QueryFetch($QueTurno)){
 			if($RowTurno['id_turno'] != $sJ['CEI_ID_TURNO']){RJRE("EDITAR Hay un turno de ".$RowTurno['horario_inicio']." a ".$RowTurno['horario_fin']." que se superpone con el horario ingresado para el dia ".$sJ['CFA_FECHA_TURNO'].".");}
 			if($RowTurno['estado'] == '0'){RJRE("El turno ya se encuentra anulado.");}
 			if($RowTurno['estado'] != '1'){RJRE("Ya se marco la asistencia del turno.");}
-			$ESTADO_ANTERIOR = json_encode($RowTurno);
+			$ESTADO_ANTERIOR = array(
+				'id_turno' 		=> $RowTurno['id_turno'],
+				'id_paciente' 	=> $RowTurno['id_paciente'],
+				'fecha' 		=> $RowTurno['fecha'],
+				'horario_inicio'=> $RowTurno['horario_inicio'],
+				'horario_fin' 	=> $RowTurno['horario_fin'],
+				'valor_sesion' 	=> $RowTurno['valor_sesion'],
+				'estado' 		=> $RowTurno['estado'],
+				'observaciones' => $RowTurno['observaciones']
+			);
 		}
 		QueryUpdate("UPDATE ".$DBT['TURNOS']." SET `id_paciente` = '".$sJ['CEI_ID_PACIENTE']."', `fecha` = '".$sJ['CFA_FECHA_TURNO']."', `horario_inicio` = '".$sJ['CHA_HORARIO_INICIO']."', `horario_fin` = '".$sJ['CHA_HORARIO_FIN']."', `valor_sesion` = '".$sJ['CEI_VALOR']."', `estado` = '1' WHERE `id_turno` = '".$sJ['CEI_ID_TURNO']."'");
-		$AUDIT_ID = $sJ['CEI_ID_TURNO'];
-		$AUDIT_ACCION = 'Edit';
+		
+		$ESTADO_NUEVO['observaciones'] = $ESTADO_ANTERIOR['observaciones'];
+		RegistrarAuditoria($DBT['TURNOS'], $sJ['CEI_ID_TURNO'], 'Edit turno', $ESTADO_ANTERIOR, $ESTADO_NUEVO);
 	}
 	
-	$ESTADO_ANTERIOR_SQL = $ESTADO_ANTERIOR ? "'".$ESTADO_ANTERIOR."'" : "NULL";
-	QueryInsert("INSERT INTO ".$DBT['AUDITORIA']." (`tabla_afectada`, `registro_id`, `accion`, `estado_anterior`, `estado_nuevo`, `usuario_id`, `fecha`) VALUES ('".$DBT['TURNOS']."', '".$AUDIT_ID."', '".$AUDIT_ACCION."', ".$ESTADO_ANTERIOR_SQL.", '".$ESTADO_NUEVO."', '".$C_USER['ID']."', NOW())");
 	RJRO();
-	
 }
 elseif($ROUTE_OPC == 'Ver_Calendario'){
 	$RETURN['DISPLAY_PERIODO'] = '';
@@ -427,12 +459,15 @@ elseif($ROUTE_OPC == 'Ver_Calendario'){
 }
 elseif($ROUTE_OPC == 'Ver_Turno'){
 	$RETURN['ID_TURNO'] = '0';
+	 $RETURN['MENSAJE'] = 'No se encontró el turno;' ;
 	if($PP['C'] != 1){EJE($RETURN);}	
 	if(CIJE('CEI_ID_TURNO') === TRUE){EJE($RETURN);};
 	
-	$Que = QuerySelect("SELECT T.`id_turno`, T.`id_paciente`, CONCAT( P.`apellido`, ', ', P.`nombre`) AS 'paciente',T.`horario_inicio`, T.`horario_fin`, T.`valor_sesion`  FROM ".$DBT['TURNOS']." T LEFT JOIN ".$DBT['PACIENTES']." P ON T.`id_paciente` = P.`id_paciente` WHERE T.`id_turno` = ".$sJ['CEI_ID_TURNO']." AND T.`estado` = '1'");
+	$Que = QuerySelect("SELECT T.`id_turno`, T.`id_paciente`, CONCAT( P.`apellido`, ', ', P.`nombre`) AS 'paciente',T.`horario_inicio`, T.`horario_fin`, T.`valor_sesion`, T.`estado` FROM ".$DBT['TURNOS']." T LEFT JOIN ".$DBT['PACIENTES']." P ON T.`id_paciente` = P.`id_paciente` WHERE T.`id_turno` = ".$sJ['CEI_ID_TURNO']." AND T.`estado` != '0'");
 	if(QueryNumRows($Que) > 0){
 		while($Row = QueryFetch($Que)){
+			// if($Row['estado'] != '1'){$RETURN['ID_TURNO'] = '-1'; $RETURN['MENSAJE'] = 'No se puede modificar el turno, ya se marcó su asistencia.' ; EJE($RETURN);}
+			if($Row['estado'] != '1'){$RETURN['ID_TURNO'] = '0'; $RETURN['MENSAJE'] = 'No se puede modificar el turno, ya se marcó su asistencia.' ; EJE($RETURN);}
 			$RETURN['ID_TURNO']			= $Row['id_turno'];
 			$RETURN['ID_PACIENTE'] 		= $Row['id_paciente'];
 			$RETURN['PACIENTE'] 		= $Row['paciente'];
@@ -463,14 +498,35 @@ elseif($ROUTE_OPC == 'Procesar_Turno_Estado'){
 	if(CIJE('CEI_ID_TURNO') === TRUE){RJRE("No se pudo procesar el identificador del turno");};
 	if(CIJE('CET_ESTADO') === TRUE){RJRE("No se pudo procesar el identificador del estado");};
 	if(CIJE('CTS_MOTIVO') === TRUE){ $sJ['CTS_MOTIVO'] = NULL;};	
-	$Que = QuerySelect("SELECT `id_turno`, `observaciones`, `fecha`, `estado` FROM ".$DBT['TURNOS']." WHERE `id_turno` = '".$sJ['CEI_ID_TURNO']."'");
-	// $Que = QuerySelect("SELECT T.`id_turno`,T.`motivo`, T.`fecha`,T.`estado` FROM ".$DBT['TURNERAS_TURNOS']." T JOIN ".$DBT['TURNERAS_AGENDAS']." A ON A.`id_agenda`=A.`id_agenda` WHERE T.`id_turno`='".$sJ['CEI_ID_TURNO']."' AND A.`id_categoria` IN (".implode(",", $PERMISOS_M).")", "QWE_PORTAL");
+	$Que = QuerySelect("SELECT `id_turno`, `id_paciente`, `horario_inicio`, `horario_fin`, `valor_sesion`, `fecha`, `observaciones`, `estado` FROM ".$DBT['TURNOS']." WHERE `id_turno` = '".$sJ['CEI_ID_TURNO']."'");
 	if(QueryNumRows($Que) < 1){RJRE("El turno no se pudo identificar o no esta disponible");}
 	while($Row = QueryFetch($Que)){
 		if($Row['estado'] == 0){ RJRE("No se puede modificar un turno anulado"); }
 		if($Row['fecha'] > date("Y-m-d") && $sJ['CET_ESTADO'] != 1){ RJRE("No se puede modificar un turno antes de tiempo"); }
-		if($Row['estado'] != $sJ['CET_ESTADO'] || $Row['obsercaciones'] != $sJ['CTS_MOTIVO']){
+		if($Row['estado'] != $sJ['CET_ESTADO'] || $Row['observaciones'] != $sJ['CTS_MOTIVO']){
 			QueryUpdate("UPDATE ".$DBT['TURNOS']." SET `observaciones`=".QueryValue($sJ['CTS_MOTIVO']).",`estado`='".$sJ['CET_ESTADO']."' WHERE `id_turno`='".$sJ['CEI_ID_TURNO']."'");
+			
+			$ESTADO_ANTERIOR = array(
+				'id_turno' 		=> $Row['id_turno'],
+				'id_paciente' 	=> $Row['id_paciente'],
+				'fecha' 		=> $Row['fecha'],
+				'horario_inicio'=> $Row['horario_inicio'],
+				'horario_fin' 	=> $Row['horario_fin'],
+				'valor_sesion' 	=> $Row['valor_sesion'],
+				'estado' 		=> $Row['estado'],
+				'observaciones' => $Row['observaciones']
+			);
+			
+			$ESTADO_NUEVO = $ESTADO_ANTERIOR;
+			$ESTADO_NUEVO['estado'] = $sJ['CET_ESTADO'];
+			$ESTADO_NUEVO['observaciones'] = $sJ['CTS_MOTIVO'];
+			
+			$Accion = 'Reservado';
+			if($sJ['CET_ESTADO'] == 0){ $Accion = 'Anulacion'; }
+			elseif($sJ['CET_ESTADO'] == 11){ $Accion = 'Presente'; }
+			elseif($sJ['CET_ESTADO'] == 10){ $Accion = 'Ausente'; }
+			
+			RegistrarAuditoria($DBT['TURNOS'], $sJ['CEI_ID_TURNO'], $Accion, $ESTADO_ANTERIOR, $ESTADO_NUEVO);
 		}
 	}	
 	RJRO($sJ['CEI_ID_TURNO']);
