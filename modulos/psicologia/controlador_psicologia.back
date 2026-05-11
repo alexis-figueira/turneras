@@ -1,7 +1,4 @@
 <?php 
-// require_once './db_connect_portal.sys';
-use Dompdf\Dompdf;
-use Dompdf\Options;
 
 $PALETA_COLORES['ERROR'] 		= '#B39DDB'; //violeta
 $PALETA_COLORES['PASADO'] 		= '#A6A6A6'; // gris
@@ -10,156 +7,7 @@ $PALETA_COLORES['VACIO'] 		= '#48C774'; // verde
 $PALETA_COLORES['AGENDADO'] 	= '#2E6E47'; // verde
 $PALETA_COLORES['COMPLETOS'] 	= '#FFD93D';//2E7D32 // Amarillo
 
-$CANCELAR_TURNO = 1; // HORAS DE ANTELACION PARA CANCELAR UN TURNO // DUPLICADO EN PORTAL
 
-function create_pdf($TURNOS){
-	/*= [NOMBRE] => TURNOS
-		[CATEGORIA] => ODONTOLOGIA
-		[PROFESIONAL] => PROFESIONAL 1
-		//[AGENDA] => ODONTOLOGIA - PROFESIONAL 1
-		[FECHA] => 08-08-2025
-		[ROWS] => [0] => 
-					[ST] => 
-					[AFILIADO] => FIGUEIRA ALEXIS DAMIAN
-					[DNI] => 39490719
-					[NRO_OMINT] => 4929658500018
-					[NRO_AFI] => 47257/1
-					[HORA] => 10:00
-	*/
-	$TURNOS['AGENDA'] = $TURNOS['CATEGORIA']." - ".$TURNOS['PROFESIONAL'];
-	$NORMAS_ISO = "DAS.CALIDAS.RE31-REV00";
-	$MT = "100";
-	$MTH = "60";
-	$MB = "50";
-	$MBH = "30";
-	$formatterES = new NumberFormatter("es", NumberFormatter::SPELLOUT);
-	$MAX_ROWS = 27;
-	
-	$STYLE = '<style>';
-		$STYLE .= 	'body		{ size: A4;font-size: 12px;color: #333;font-family: "Roboto Condensed", sans-serif ; }'; /*  border: 1px solid red; */
-		$STYLE .= 	'@page		{ size: A4 ; margin: '.($MT+30).'px 25px 30px 25px!important}';
-		$STYLE .= 	'@page 		{ @bottom-center { content: element(footer); }}';
-		$STYLE .= 	'.header 	{ position:fixed; top:-'.($MT+10).'px; left:0; right:0; width:100%; }';/* border: 1px solid green; */
-		$STYLE .= 	'#footer 	{ width: 100%; text-align: center; font-size: 12px; height: 50px; margin: 30px 0px 0px 0px; }';
-		$STYLE .= 	'.cabecera	{ background: #ececec;overflow: hidden;height: '.$MTH.'px; padding: 15px; border-radius: 5px; }'; /* border: 1px solid green; */
-		$STYLE .= 	'.normas	{ position:absolute; top:20px; left:14px; width:170px; height:22px; line-height:20px; font-weight:700; border-radius:5px; text-align:center;}';
-		$STYLE .= 	'.fecha		{ position:absolute; top:20px; right:14px; width:99px; height:22px; line-height:20px; font-weight:700; background:#bdbdbd; color:#333; border-radius:5px; text-align:center;}';
-		$STYLE .= 	'.leyenda	{ margin-top: 8px; font-size: 10px; font-style: italic; color: #333 }';
-		$STYLE .=  	'.label 	{ background: #bdbdbd; margin-top: 10px; font-weight: 700; border-radius: 5px; display: inline-block; padding: 5px 10px; text-align: center; line-height: 1.2; }';
-		$STYLE .=  	'.label div { margin: 2px 0; white-space: nowrap; }';
-		$STYLE .= 	'table 		{ width: 100%; font-size: 12px; border-collapse: collapse; }';
-		$STYLE .= 	'td 		{ height: 35px; }';
-		$STYLE .= 	'.pagina	{ position: absolute; bottom: +'.($MB-30).'px; left:0; right:0; width:100%; height: '.$MBH.'px;}';
-	$STYLE .= '</style>';
-	
-	$HEADER = '<div class="header">';
-		$HEADER .= '<div class="cabecera" align="center">';
-			$HEADER .= '<div class="label" align="left">';
-				$HEADER .= '<div>'.$TURNOS['AGENDA']." - ".$TURNOS['FECHA'].'</div>';
-			$HEADER .= '</div>'; 
-		$HEADER .= '</div>';
-	$HEADER .= '</div>';
-	$pages = array_chunk($TURNOS['ROWS'], $MAX_ROWS);
-	$BODY = '';
-		$BODY .= '<div class="divbody">';
-			$BODY .= '<table style="color:#333; border-collapse: collapse;" border=1 width="100%">';
-				$BODY .= '<thead>';
-					$BODY .= '<tr>';
-						$BODY .= '<th style="border: 1px solid #bdbdbd;border-collapse: collapse; width: 30%;" >AFLILIADO</th>';
-						$BODY .= '<th style="border: 1px solid #bdbdbd;border-collapse: collapse; width: 15%;" >DNI</th>';
-						$BODY .= '<th style="border: 1px solid #bdbdbd;border-collapse: collapse; width: 20%;" >NRO OMINT</th>';
-						$BODY .= '<th style="border: 1px solid #bdbdbd;border-collapse: collapse; width: 15%;" >HORA</th>';
-						$BODY .= '<th style="border: 1px solid #bdbdbd;border-collapse: collapse; width: 20%;" >FIRMA</th>';
-					$BODY .= '</tr>';
-				$BODY .= '</thead>'; 
-				foreach ($pages as $pageIndex => $rows){
-				$BODY .= '<tbody>';
-					foreach($rows as $K ){
-						$BODY .= '<tr>';
-							$BODY .= '<td style="border: 1px solid #bdbdbd;border-collapse: collapse; text-align: center;">'.$K['AFILIADO'].'</td>';
-							$BODY .= '<td style="border: 1px solid #bdbdbd;border-collapse: collapse; text-align: center;">'.$K['DNI'].'</td>';
-							$BODY .= '<td style="border: 1px solid #bdbdbd;border-collapse: collapse; text-align: center;">'.$K['NRO_OMINT'].'</td>';
-							$BODY .= '<td style="border: 1px solid #bdbdbd;border-collapse: collapse; text-align: center;">'.$K['HORA'].$K['ST'].'</td>';
-							$BODY .= '<td style="border: 1px solid #bdbdbd;border-collapse: collapse; text-align: center;"></td>';
-						$BODY .= '</tr>';
-					}
-				$BODY .= '</tbody>';
-				}
-			$BODY .= '</table><br/>';
-		$BODY .= '</div>';
-
-	$PDF = $STYLE.$HEADER.$BODY;
-	$dompdf = new Dompdf();
-	$dompdf->set_option('isHtml5ParserEnabled', true);
-	$dompdf->set_option('isPhpEnabled', true);
-	$dompdf->loadHtml($PDF, "UTF-8");
-	$dompdf->setPaper("A4", "portrait");
-	$dompdf->set_option('defaultMediaType', 'all');
-	$dompdf->set_option('isFontSubsettingEnabled', true);
-	$dompdf->render();
-	$pdfOutput = $dompdf->output();
-	$base64PDF = base64_encode($pdfOutput);
-	return array(
-		'file_base64' => $base64PDF,
-		'filename' => $TURNOS['NOMBRE'].'.pdf'
-	);
-}
-function create_pdf_ticket($TURNO){ // TIENE CAMBIOS
-	list($dia, $mes, $año) = explode('-', $TURNO['FECHA']);
-// AGREGO FILA NRO. AFILIADO 
-// Y AGREGO LO DE LINEA XQ QUE ACEPTA TODAS LAS AGENDAS Y QUEDA RARO EL MENSAJE.
-	if($TURNO['CATEGORIA'] == 'CHEQUEO ANUAL'){
-		$LINEA_PROFESIONAL = "Establecimiento: ".$TURNO['PROFESIONAL'];
-		$LINEA_HORARIO = "Hora: ".$TURNO['HORARIO'];
-	}else{
-		$LINEA_PROFESIONAL = "Profesional Dr.: ".$TURNO['PROFESIONAL'];
-		$LINEA_HORARIO = "Consultorio Nº: ___ Hora: ".$TURNO['HORARIO'];
-	}
-	
-	$HTML = '<html>';
-		$HTML .= '<head>';
-			$HTML .= '<meta charset="UTF-8">';
-			$HTML .= '<style>';
-				$HTML .= 'body			{ font-family:monospace; font-size:14px; margin:0; padding:0; }';
-				$HTML .= '.ticket-container { width:70mm; margin:0 auto; padding:5px; }';
-				$HTML .= '.ticket		{ border:1px solid black; padding:5px; }';
-				$HTML .= '.title		{ font-weight:bold; text-align:center; margin-bottom:5px; font-size:14px; }';
-				$HTML .= '.line 		{ margin-bottom:3px; }';
-				$HTML .= '.firma 		{ margin-top:35px; border-top:1px solid black; text-align:center; font-size:11px; padding:2px 10px 0px 10px;}';
-				$HTML .= '@media print 	{ ';
-					$HTML .= '@page 		{ size:auto; margin:0; }';
-					$HTML .= 'body			{ margin:0; padding:0; }';
-				$HTML .= '}';
-			$HTML .= '</style>';
-		$HTML .= '</head>';
-		$HTML .= '<body>';
-			$HTML .= '<div class="ticket-container">';
-				$HTML .= '<div class="ticket">';
-					$HTML .= '<div class="title">DIRECCIÓN DE AYUDA SOCIAL PARA EL PERSONAL DEL CONGRESO DE LA NACIÓN</div>';
-					$HTML .= '<div class="line">TURNO '.$TURNO['CATEGORIA'].'</div>';
-					$HTML .= '<div class="line">Día: '.$dia.' Mes: '.$mes.' Año: '.$año.'</div>';
-					// $HTML .= '<div class="line">Profesional Dr.: '.$TURNO['PROFESIONAL'].'</div>';
-					// $HTML .= '<div class="line">Consultorio Nº: ___ Hora: '.$TURNO['HORARIO'].'</div>';
-					$HTML .= '<div class="line">'.$LINEA_PROFESIONAL.'</div>';
-					$HTML .= '<div class="line">'.$LINEA_HORARIO.'</div>';
-					$HTML .= '<div class="line">Paciente: '.$TURNO['AFILIADO'].'</div>';
-					$HTML .= '<div class="line">Nro. Afiliado: '.$TURNO['NRO_AFI'].'</div>';
-					$HTML .= '<div class="firma">Firma del agente interviniente</div>';
-				$HTML .= '</div>';
-			$HTML .= '</div>';
-		$HTML .= '</body>';
-	$HTML .= '</html>';
-	return $HTML;
-}
-function Estados2($ESTADO, $METODO = NULL, $MOTIVO = NULL){
-	if($METODO == 0){ $METODO = '-PORTAL';}else{ $METODO = '';}
-	if($MOTIVO != NULL) { $INFO = ' - <i class="fa-solid fa-triangle-exclamation fa-lg" style="color:Orange" title="'.$MOTIVO.'"></i>'; }else{ $INFO = ''; }
-	if($ESTADO == 0){ return 'ANULADO'.$METODO.' <i class="fa-solid fa-circle-xmark fa-lg" style="color:red"></i>'.$INFO;}
-	elseif($ESTADO == 1){ return 'RESERVADO'.$METODO.' <i class="fa-solid fa-circle fa-lg" style="color:grey"></i>'.$INFO;}
-	elseif($ESTADO == 10){ return 'AUSENTE <i class="fa-solid fa-circle-xmark fa-lg" style="color:purple"></i>'.$INFO;}
-	elseif($ESTADO == 11){ return 'PRESENTE <i class="fa-solid fa-circle-check fa-lg" style="color:green"></i>'.$INFO;}
-	else {return '';}
-}
 function Update_Fecha(&$calendario, $dia, $color, $title, $fecha) {
     foreach ($calendario as $semana => &$dias) {
         foreach ($dias as $diaSemana => &$datos) {
@@ -173,8 +21,6 @@ function Update_Fecha(&$calendario, $dia, $color, $title, $fecha) {
     }
     return false;
 }
-
-//Funciones mias
 function generarSemanas($fechaInicio, $click = false) {
     $fecha = new DateTime($fechaInicio);
     $diasEnMes = $fecha->format('t');
@@ -200,70 +46,26 @@ function generarSemanas($fechaInicio, $click = false) {
 }
 function Estados($ESTADO, $MOTIVO = NULL){
 	if($MOTIVO != NULL) { $INFO = ' - <i class="fa-solid fa-triangle-exclamation fa-lg" style="color:Orange" title="'.$MOTIVO.'"></i>'; }else{ $INFO = ''; }
-
 	if($ESTADO == 0){ 		return 	'<i class="fa-solid fa-user-xmark fa-lg" style="color:red" 		title="ANULADO"></i>'.$INFO;}
 	elseif($ESTADO == 1){	return	'<i class="fa-solid fa-user-minus fa-lg" style="color:grey"		title="RESERVADO"></i>'.$INFO;}
 	elseif($ESTADO == 10){ 	return 	'<i class="fa-solid fa-user-xmark fa-lg" style="color:purple"		title="AUSENTE"></i>'.$INFO;}
 	elseif($ESTADO == 11){ 	return 	'<i class="fa-solid fa-user-check fa-lg" style="color:green"	title="PRESENTE"></i>'.$INFO;}
 	else {return '';}
-	
-	
-	// if($ESTADO == 0){ return 'ANULADO <i class="fa-solid fa-circle-xmark fa-lg" style="color:red"></i>'.$INFO;}
-	// elseif($ESTADO == 1){ return 'RESERVADO <i class="fa-solid fa-circle fa-lg" style="color:grey"></i>'.$INFO;}
-	// elseif($ESTADO == 10){ return 'AUSENTE <i class="fa-solid fa-circle-xmark fa-lg" style="color:purple"></i>'.$INFO;}
-	// elseif($ESTADO == 11){ return 'PRESENTE <i class="fa-solid fa-circle-check fa-lg" style="color:green"></i>'.$INFO;}
-	// else {return '';}
 }
 function RegistrarAuditoria($tabla, $registro_id, $accion, $estado_anterior, $estado_nuevo) {
     global $DBT, $C_USER;
+    if ($estado_anterior !== null && $estado_nuevo !== null){
+        $diff_nuevo = array_diff_assoc($estado_nuevo, $estado_anterior);
+        $diff_anterior = array_diff_assoc($estado_anterior, $estado_nuevo);
+        if(empty($diff_nuevo) && empty($diff_anterior)){ return; }
+
+        $estado_anterior = $diff_anterior;
+        $estado_nuevo = $diff_nuevo;
+    }
     $estado_anterior_sql = $estado_anterior ? QueryValue(json_encode($estado_anterior)) : "NULL";
     $estado_nuevo_sql = $estado_nuevo ? QueryValue(json_encode($estado_nuevo)) : "NULL";
     QueryInsert("INSERT INTO ".$DBT['AUDITORIA']." (`tabla_afectada`, `registro_id`, `accion`, `estado_anterior`, `estado_nuevo`, `usuario_id`, `fecha`) VALUES ('".$tabla."', '".$registro_id."', '".$accion."', ".$estado_anterior_sql.", ".$estado_nuevo_sql.", '".$C_USER['ID']."', NOW())");
 }
-
-/* En caso de actualizacion de los template modificar portal de afiliados */ 
-function TemplateAlta($AFILIADO,$TURNO, $TURNERA, $MENSAJE){
-	$RETURN = '<div style="width:450px;border: 5px solid #27AE98; padding:20px;" align="center">';
-		$RETURN .= '<img src="data:image/png;base64,'.$GLOBALS['CFG_LOGO_DAS'].'" alt="Logo"/>';
-		$RETURN .= '<br><hr>';
-		$RETURN .= '<h2 style="color:blue;"><b>Confirmacion de Turno</b></h2>';
-		$RETURN .= '<p style="font-size:16px; text-align:justify;">Hola '.$AFILIADO.',</p>';
-		$RETURN .= '<p style="font-size:16px; text-align:justify;">';
-			$RETURN .= 'Tu turno ha sido confirmado. A continuación, te compartimos los detalles:</br>';
-			$RETURN .= '- Fecha y hora: '.$TURNO.'</br>';
-			$RETURN .= '- Motivo: '.$TURNERA.'</br>';
-		$RETURN .= '</p>';
-		$RETURN .= '<hr>';
-		$RETURN .= '<h3 style="color:orange;">Información importante:</h3>';
-		$RETURN .= '<p style="font-size:16px;text-align:left;">'.nl2br($MENSAJE).'</p>';
-		$RETURN .= '<hr>';
-		$RETURN .= '<p style="font-size:14px; text-align:justify;">';
-			$RETURN .= 'Si no podés asistir, te pedimos que canceles tu turno con anticipación para brindarle la oportunidad a otro afiliado! Podés hacerlo a través de:<br/>';
-			$RETURN .= '- Telefonicamente: 0810-222-0317<br/>';
-			$RETURN .= '- Web: Portal de Autogestión<br/>';
-		$RETURN .= '</p>';
-		$RETURN .= '<p>Muchas Gracias,</p>';
-		$RETURN .= '<p><b>DAS</b></p>';
-	$RETURN .= '</div>';
-	return $RETURN;
-}
-function TemplateCancelacion($AFILIADO,$TURNO, $TURNERA){
-	$RETURN = '<div style="width:450px;border: 5px solid #27AE98; padding:20px;" align="center">';
-		$RETURN .= '<img src="data:image/png;base64,'.$GLOBALS['CFG_LOGO_DAS'].'" alt="Logo"/>';
-		$RETURN .= '<br><hr>';
-		$RETURN .= '<h2 style="color:blue;"><b>Cancelacion de Turno</b></h2>';
-		$RETURN .= '<p style="font-size:16px; text-align:justify;">Hola '.$AFILIADO.',</p>';
-		$RETURN .= '<p style="font-size:16px; text-align:justify;">';
-			$RETURN .= 'Tu turno ha sido cancelado. A continuación, te compartimos los detalles:</br>';
-			$RETURN .= '- Fecha y hora: '.$TURNO.'</br>';
-			$RETURN .= '- Turno: '.$TURNERA.'</br>';
-		$RETURN .= '</p>';
-		$RETURN .= '<p>Muchas Gracias,</p>';
-		$RETURN .= '<p><b>DAS</b></p>';
-	$RETURN .= '</div>';
-	return $RETURN;
-}
-
 
 
 if($ROUTE_OPC == 'Listado_Turnos_Dia'){
@@ -480,47 +282,111 @@ elseif($ROUTE_OPC == 'Ver_Turno'){
 }
 elseif($ROUTE_OPC == 'Ver_Valor'){
 	$RETURN['ID_TURNO'] = '0';
-	$RETURN['MENSAJE'] = 'No se encontró el turno;' ;
 	if($PP['C'] != 1){EJE($RETURN);}	
+	$RETURN['MENSAJE'] = 'No se encontró el turno.' ;
 	if(CIJE('CEI_ID_TURNO') === TRUE){EJE($RETURN);};
 	
-	$Que = QuerySelect("SELECT `id_turno`, `valor_sesion` FROM ".$DBT['TURNOS']." WHERE `id_turno` = ".$sJ['CEI_ID_TURNO']." AND `estado` != '0'");
-	// $Que = QuerySelect("SELECT T.`id_turno`, T.`id_paciente`, CONCAT( P.`apellido`, ', ', P.`nombre`) AS 'paciente',T.`horario_inicio`, T.`horario_fin`, T.`valor_sesion`, T.`estado` FROM ".$DBT['TURNOS']." T LEFT JOIN ".$DBT['PACIENTES']." P ON T.`id_paciente` = P.`id_paciente` WHERE T.`id_turno` = ".$sJ['CEI_ID_TURNO']." AND T.`estado` != '0'");
+	$Que = QuerySelect("SELECT T.`id_turno`, T.`id_paciente`, T.`valor_sesion`, `valor_pagado` FROM ".$DBT['TURNOS']." T LEFT JOIN ".$DBT['PAGOS']." P ON P.`id_turno` = T.`id_turno` WHERE T.`id_turno` = ".$sJ['CEI_ID_TURNO']." AND T.`estado` != '0'");
 	if(QueryNumRows($Que) > 0){
 		while($Row = QueryFetch($Que)){
-			$RETURN['ID_TURNO']			= $Row['id_turno'];
-			$RETURN['VALOR_SESION'] 	= $Row['valor_sesion'];
+			$RETURN['ID_TURNO']		= $Row['id_turno'];
+			$RETURN['ID_PACIENTE'] 	= $Row['id_paciente'];
+			$RETURN['VALOR_SESION'] = $Row['valor_sesion'];
+			$RETURN['VALOR_PAGADO'] = $Row['valor_pagado'];
+			unset($RETURN['MENSAJE']);
 		}
 	}
 	EJE($RETURN);
 }
-elseif($ROUTE_OPC == 'Ver_Turno_Status'){
+elseif($ROUTE_OPC == 'Ver_Turno_Estado'){
 	$RETURN['ID_TURNO'] = 0;
-	if($PP['M'] != 1){EJE($RETURN);}
+	if($PP['C'] != 1){EJE($RETURN);}
 	if(CIJE('CEI_ID_TURNO') === TRUE){EJE($RETURN);};
 	
-	$Que = QuerySelect("SELECT `id_turno`, `observaciones`, `estado` FROM ".$DBT['TURNOS']." WHERE `id_turno`='".$sJ['CEI_ID_TURNO']."' AND `estado`!= '0'");
+	$Que = QuerySelect("SELECT `id_turno`, `id_paciente`,`observaciones`, `estado` FROM ".$DBT['TURNOS']." WHERE `id_turno`='".$sJ['CEI_ID_TURNO']."' AND `estado`!= '0'");
 	if(QueryNumRows($Que) > 0){
 		while($Row = QueryFetch($Que)){
-			$RETURN['ID_TURNO'] = $Row['id_turno'];
-			$RETURN['MOTIVO'] 	= $Row['observaciones'];
-			$RETURN['ESTADO'] 	= $Row['estado'];
+			$RETURN['ID_TURNO'] 	= $Row['id_turno'];
+			$RETURN['ID_PACIENTE'] 	= $Row['id_paciente'];
+			$RETURN['OBSERVACIONES']= $Row['observaciones'];
+			$RETURN['ESTADO'] 		= $Row['estado'];
 		}
 	}
 	EJE($RETURN);
+}
+elseif($ROUTE_OPC == 'Procesar_Anular_Turno'){
+	if($PP['B'] == 0){RJRE("Permiso denegado");}
+	if(CIJE('CEI_ID_PACIENTE') === TRUE){RJRE("No se pudo procesar el identificador del afiliado");};
+	if(CIJE('CEI_ID_TURNO') === TRUE){RJRE("No se pudo procesar el identificador del turno");};
+	
+	$ESTADO_ANTERIOR['estado'] 		= "1";
+	$ESTADO_ANTERIOR['valor_pagado']= "";
+	$ESTADO_NUEVO['estado'] 		= "0";
+	$ESTADO_NUEVO['valor_pagado'] 	= null;
+	$ACCION = "Anula turno";
+	
+	$Que = QuerySelect("SELECT T.`id_turno`, P.`valor_pagado` FROM ".$DBT['TURNOS']." T LEFT JOIN ".$DBT['PAGOS']." P ON P.`id_turno` = T.`id_turno` WHERE T.`id_paciente`='".$sJ['CEI_ID_PACIENTE']."' AND T.`id_turno`='".$sJ['CEI_ID_TURNO']."' AND T.`estado`='1'");
+	if(QueryNumRows($Que) < 1){ RJRE("Error al procesar el turno seleccionado"); }
+	while($Row = QueryFetch($Que)){$ESTADO_ANTERIOR['valor_pagado'] = $Row['valor_pagado'];}
+	QueryUpdate("UPDATE ".$DBT['TURNOS']." SET `estado` = '0', `reg_user` = '".$C_USER['ID']."', `reg_fecha` = NOW() WHERE `id_paciente` = '".$sJ['CEI_ID_PACIENTE']."' AND `id_turno` = '".$sJ['CEI_ID_TURNO']."'");
+	QueryUpdate("UPDATE ".$DBT['PAGOS']." SET `valor_pagado` = '0', `reg_user` = '".$C_USER['ID']."', `reg_fecha` = NOW() WHERE `id_turno` = '".$sJ['CEI_ID_TURNO']."'");
+	
+	
+	RegistrarAuditoria($DBT['TURNOS'], $sJ['CEI_ID_TURNO'], $ACCION, $ESTADO_ANTERIOR, $ESTADO_NUEVO);
+	
+	RJRO();
+}
+elseif($ROUTE_OPC == 'Procesar_Cobro'){
+	if($PP['M'] == 0){RJRE("Permiso denegado");}
+	if(CIJE('CEI_ID_TURNO') === TRUE){		RJRE("No se pudo procesar el identificador del turno.");};
+	if(CIJE('CEI_ID_PACIENTE') === TRUE){	RJRE("No se pudo procesar el identificador del paciente.");};
+	if(CIJE('CEI_VALOR_PACTADO') === TRUE){	RJRE("No se pudo procesar el valor pactado.");};
+	if(CIJE('CEI_VALOR_COBRADO') === TRUE){	RJRE("No se pudo procesar el valor cobrado.");};
+	
+	$Que = QuerySelect("SELECT T.`id_turno`, T.`valor_sesion`, T.`id_paciente`, T.`estado`, P.`valor_pagado`, P.`reg_user`, P.`reg_fecha` FROM ".$DBT['TURNOS']." T LEFT JOIN ".$DBT['PAGOS']." P ON P.`id_turno` = T.`id_turno` WHERE T.`id_turno` = '".$sJ['CEI_ID_TURNO']."'");
+	if(QueryNumRows($Que) < 1){RJRE("El turno no se pudo identificar.");}
+	while($Row = QueryFetch($Que)){
+		$ESTADO_NUEVO = array(
+			'valor_pagado' 	=> $sJ['CEI_VALOR_COBRADO'],
+			'reg_user' 		=> $C_USER['ID'],
+			'reg_fecha' 	=> date("Y-m-d H:i:s")
+		);
+		if($Row['estado'] == '0'){ RJRE("El turno se encuentra anulado.");}
+		if($Row['id_paciente'] != $sJ['CEI_ID_PACIENTE']){RJRE("Ocurrio un error al vincular al paciente.");}
+		if($Row['valor_sesion'] != $sJ['CEI_VALOR_PACTADO']){RJRE("El valor pactado fue modificado de forma manual.");}
+		
+		if($Row['valor_pagado'] == '' || is_null($Row['valor_pagado'])){
+			$ESTADO_ANTERIOR = null;	
+			$ACCION = "Alta cobro";
+			QueryInsert("INSERT INTO ".$DBT['PAGOS']."(`id_paciente`, `id_turno`, `valor_pagado`, `fecha_pago`, `reg_user`, `reg_fecha`) VALUES('".$sJ['CEI_ID_PACIENTE']."', '".$sJ['CEI_ID_TURNO']."','".$sJ['CEI_VALOR_COBRADO']."', NOW(), ".$C_USER['ID'].", NOW())");
+		}
+		else{
+			$ESTADO_ANTERIOR = array(
+				'valor_pagado' 	=> $Row['valor_pagado'],
+				'reg_user' 		=> $Row['reg_user'],
+				'reg_fecha' 	=> $Row['reg_fecha']
+			);
+			$ACCION = "Modifica cobro";
+			QueryUpdate("UPDATE ".$DBT['PAGOS']." SET `valor_pagado` = '".$sJ['CEI_VALOR_COBRADO']."', `reg_user` = '".$C_USER['ID']."', `reg_fecha`= NOW() WHERE `id_turno` = '".$sJ['CEI_ID_TURNO']."'");
+		}
+		RegistrarAuditoria($DBT['PAGOS'], $sJ['CEI_ID_TURNO'], $ACCION, $ESTADO_ANTERIOR, $ESTADO_NUEVO);
+	}
+	RJRO();
+
 }
 elseif($ROUTE_OPC == 'Procesar_Turno_Estado'){
 	if($PP['M'] == 0){RJRE("Permiso denegado");}
 	if(CIJE('CEI_ID_TURNO') === TRUE){RJRE("No se pudo procesar el identificador del turno");};
 	if(CIJE('CET_ESTADO') === TRUE){RJRE("No se pudo procesar el identificador del estado");};
-	if(CIJE('CTS_MOTIVO') === TRUE){ $sJ['CTS_MOTIVO'] = NULL;};	
+	if(CIJE('CtU_OBSERVACIONES') === TRUE){ $sJ['CtU_OBSERVACIONES'] = NULL;};	
+	
 	$Que = QuerySelect("SELECT `id_turno`, `id_paciente`, `horario_inicio`, `horario_fin`, `valor_sesion`, `fecha`, `observaciones`, `estado` FROM ".$DBT['TURNOS']." WHERE `id_turno` = '".$sJ['CEI_ID_TURNO']."'");
 	if(QueryNumRows($Que) < 1){RJRE("El turno no se pudo identificar o no esta disponible");}
 	while($Row = QueryFetch($Que)){
 		if($Row['estado'] == 0){ RJRE("No se puede modificar un turno anulado"); }
 		if($Row['fecha'] > date("Y-m-d") && $sJ['CET_ESTADO'] != 1){ RJRE("No se puede modificar un turno antes de tiempo"); }
-		if($Row['estado'] != $sJ['CET_ESTADO'] || $Row['observaciones'] != $sJ['CTS_MOTIVO']){
-			QueryUpdate("UPDATE ".$DBT['TURNOS']." SET `observaciones`=".QueryValue($sJ['CTS_MOTIVO']).",`estado`='".$sJ['CET_ESTADO']."' WHERE `id_turno`='".$sJ['CEI_ID_TURNO']."'");
+		if($Row['estado'] != $sJ['CET_ESTADO'] || $Row['observaciones'] != $sJ['CtU_OBSERVACIONES']){
+			QueryUpdate("UPDATE ".$DBT['TURNOS']." SET `observaciones`=".QueryValue($sJ['CtU_OBSERVACIONES']).",`estado`='".$sJ['CET_ESTADO']."' WHERE `id_turno`='".$sJ['CEI_ID_TURNO']."'");
 			
 			$ESTADO_ANTERIOR = array(
 				'id_turno' 		=> $Row['id_turno'],
@@ -535,7 +401,7 @@ elseif($ROUTE_OPC == 'Procesar_Turno_Estado'){
 			
 			$ESTADO_NUEVO = $ESTADO_ANTERIOR;
 			$ESTADO_NUEVO['estado'] = $sJ['CET_ESTADO'];
-			$ESTADO_NUEVO['observaciones'] = $sJ['CTS_MOTIVO'];
+			$ESTADO_NUEVO['observaciones'] = $sJ['CtU_OBSERVACIONES'];
 			
 			$Accion = 'Reservado';
 			if($sJ['CET_ESTADO'] == 0){ $Accion = 'Anulacion'; }
@@ -550,6 +416,208 @@ elseif($ROUTE_OPC == 'Procesar_Turno_Estado'){
 else{
 	EE("NO_SE_PUEDE_PROCESAR_LA_SOLICITUD");
 }
+
+
+
+// require_once './db_connect_portal.sys';
+
+// CODIGO DAS
+use Dompdf\Dompdf;
+use Dompdf\Options;
+
+$CANCELAR_TURNO = 1; // HORAS DE ANTELACION PARA CANCELAR UN TURNO // DUPLICADO EN PORTAL
+
+/* En caso de actualizacion de los template modificar portal de afiliados */ 
+function TemplateAlta($AFILIADO,$TURNO, $TURNERA, $MENSAJE){
+	$RETURN = '<div style="width:450px;border: 5px solid #27AE98; padding:20px;" align="center">';
+		$RETURN .= '<img src="data:image/png;base64,'.$GLOBALS['CFG_LOGO_DAS'].'" alt="Logo"/>';
+		$RETURN .= '<br><hr>';
+		$RETURN .= '<h2 style="color:blue;"><b>Confirmacion de Turno</b></h2>';
+		$RETURN .= '<p style="font-size:16px; text-align:justify;">Hola '.$AFILIADO.',</p>';
+		$RETURN .= '<p style="font-size:16px; text-align:justify;">';
+			$RETURN .= 'Tu turno ha sido confirmado. A continuación, te compartimos los detalles:</br>';
+			$RETURN .= '- Fecha y hora: '.$TURNO.'</br>';
+			$RETURN .= '- Motivo: '.$TURNERA.'</br>';
+		$RETURN .= '</p>';
+		$RETURN .= '<hr>';
+		$RETURN .= '<h3 style="color:orange;">Información importante:</h3>';
+		$RETURN .= '<p style="font-size:16px;text-align:left;">'.nl2br($MENSAJE).'</p>';
+		$RETURN .= '<hr>';
+		$RETURN .= '<p style="font-size:14px; text-align:justify;">';
+			$RETURN .= 'Si no podés asistir, te pedimos que canceles tu turno con anticipación para brindarle la oportunidad a otro afiliado! Podés hacerlo a través de:<br/>';
+			$RETURN .= '- Telefonicamente: 0810-222-0317<br/>';
+			$RETURN .= '- Web: Portal de Autogestión<br/>';
+		$RETURN .= '</p>';
+		$RETURN .= '<p>Muchas Gracias,</p>';
+		$RETURN .= '<p><b>DAS</b></p>';
+	$RETURN .= '</div>';
+	return $RETURN;
+}
+function TemplateCancelacion($AFILIADO,$TURNO, $TURNERA){
+	$RETURN = '<div style="width:450px;border: 5px solid #27AE98; padding:20px;" align="center">';
+		$RETURN .= '<img src="data:image/png;base64,'.$GLOBALS['CFG_LOGO_DAS'].'" alt="Logo"/>';
+		$RETURN .= '<br><hr>';
+		$RETURN .= '<h2 style="color:blue;"><b>Cancelacion de Turno</b></h2>';
+		$RETURN .= '<p style="font-size:16px; text-align:justify;">Hola '.$AFILIADO.',</p>';
+		$RETURN .= '<p style="font-size:16px; text-align:justify;">';
+			$RETURN .= 'Tu turno ha sido cancelado. A continuación, te compartimos los detalles:</br>';
+			$RETURN .= '- Fecha y hora: '.$TURNO.'</br>';
+			$RETURN .= '- Turno: '.$TURNERA.'</br>';
+		$RETURN .= '</p>';
+		$RETURN .= '<p>Muchas Gracias,</p>';
+		$RETURN .= '<p><b>DAS</b></p>';
+	$RETURN .= '</div>';
+	return $RETURN;
+}
+function create_pdf($TURNOS){
+	/*= [NOMBRE] => TURNOS
+		[CATEGORIA] => ODONTOLOGIA
+		[PROFESIONAL] => PROFESIONAL 1
+		//[AGENDA] => ODONTOLOGIA - PROFESIONAL 1
+		[FECHA] => 08-08-2025
+		[ROWS] => [0] => 
+					[ST] => 
+					[AFILIADO] => FIGUEIRA ALEXIS DAMIAN
+					[DNI] => 39490719
+					[NRO_OMINT] => 4929658500018
+					[NRO_AFI] => 47257/1
+					[HORA] => 10:00
+	*/
+	$TURNOS['AGENDA'] = $TURNOS['CATEGORIA']." - ".$TURNOS['PROFESIONAL'];
+	$NORMAS_ISO = "DAS.CALIDAS.RE31-REV00";
+	$MT = "100";
+	$MTH = "60";
+	$MB = "50";
+	$MBH = "30";
+	$formatterES = new NumberFormatter("es", NumberFormatter::SPELLOUT);
+	$MAX_ROWS = 27;
+	
+	$STYLE = '<style>';
+		$STYLE .= 	'body		{ size: A4;font-size: 12px;color: #333;font-family: "Roboto Condensed", sans-serif ; }'; /*  border: 1px solid red; */
+		$STYLE .= 	'@page		{ size: A4 ; margin: '.($MT+30).'px 25px 30px 25px!important}';
+		$STYLE .= 	'@page 		{ @bottom-center { content: element(footer); }}';
+		$STYLE .= 	'.header 	{ position:fixed; top:-'.($MT+10).'px; left:0; right:0; width:100%; }';/* border: 1px solid green; */
+		$STYLE .= 	'#footer 	{ width: 100%; text-align: center; font-size: 12px; height: 50px; margin: 30px 0px 0px 0px; }';
+		$STYLE .= 	'.cabecera	{ background: #ececec;overflow: hidden;height: '.$MTH.'px; padding: 15px; border-radius: 5px; }'; /* border: 1px solid green; */
+		$STYLE .= 	'.normas	{ position:absolute; top:20px; left:14px; width:170px; height:22px; line-height:20px; font-weight:700; border-radius:5px; text-align:center;}';
+		$STYLE .= 	'.fecha		{ position:absolute; top:20px; right:14px; width:99px; height:22px; line-height:20px; font-weight:700; background:#bdbdbd; color:#333; border-radius:5px; text-align:center;}';
+		$STYLE .= 	'.leyenda	{ margin-top: 8px; font-size: 10px; font-style: italic; color: #333 }';
+		$STYLE .=  	'.label 	{ background: #bdbdbd; margin-top: 10px; font-weight: 700; border-radius: 5px; display: inline-block; padding: 5px 10px; text-align: center; line-height: 1.2; }';
+		$STYLE .=  	'.label div { margin: 2px 0; white-space: nowrap; }';
+		$STYLE .= 	'table 		{ width: 100%; font-size: 12px; border-collapse: collapse; }';
+		$STYLE .= 	'td 		{ height: 35px; }';
+		$STYLE .= 	'.pagina	{ position: absolute; bottom: +'.($MB-30).'px; left:0; right:0; width:100%; height: '.$MBH.'px;}';
+	$STYLE .= '</style>';
+	
+	$HEADER = '<div class="header">';
+		$HEADER .= '<div class="cabecera" align="center">';
+			$HEADER .= '<div class="label" align="left">';
+				$HEADER .= '<div>'.$TURNOS['AGENDA']." - ".$TURNOS['FECHA'].'</div>';
+			$HEADER .= '</div>'; 
+		$HEADER .= '</div>';
+	$HEADER .= '</div>';
+	$pages = array_chunk($TURNOS['ROWS'], $MAX_ROWS);
+	$BODY = '';
+		$BODY .= '<div class="divbody">';
+			$BODY .= '<table style="color:#333; border-collapse: collapse;" border=1 width="100%">';
+				$BODY .= '<thead>';
+					$BODY .= '<tr>';
+						$BODY .= '<th style="border: 1px solid #bdbdbd;border-collapse: collapse; width: 30%;" >AFLILIADO</th>';
+						$BODY .= '<th style="border: 1px solid #bdbdbd;border-collapse: collapse; width: 15%;" >DNI</th>';
+						$BODY .= '<th style="border: 1px solid #bdbdbd;border-collapse: collapse; width: 20%;" >NRO OMINT</th>';
+						$BODY .= '<th style="border: 1px solid #bdbdbd;border-collapse: collapse; width: 15%;" >HORA</th>';
+						$BODY .= '<th style="border: 1px solid #bdbdbd;border-collapse: collapse; width: 20%;" >FIRMA</th>';
+					$BODY .= '</tr>';
+				$BODY .= '</thead>'; 
+				foreach ($pages as $pageIndex => $rows){
+				$BODY .= '<tbody>';
+					foreach($rows as $K ){
+						$BODY .= '<tr>';
+							$BODY .= '<td style="border: 1px solid #bdbdbd;border-collapse: collapse; text-align: center;">'.$K['AFILIADO'].'</td>';
+							$BODY .= '<td style="border: 1px solid #bdbdbd;border-collapse: collapse; text-align: center;">'.$K['DNI'].'</td>';
+							$BODY .= '<td style="border: 1px solid #bdbdbd;border-collapse: collapse; text-align: center;">'.$K['NRO_OMINT'].'</td>';
+							$BODY .= '<td style="border: 1px solid #bdbdbd;border-collapse: collapse; text-align: center;">'.$K['HORA'].$K['ST'].'</td>';
+							$BODY .= '<td style="border: 1px solid #bdbdbd;border-collapse: collapse; text-align: center;"></td>';
+						$BODY .= '</tr>';
+					}
+				$BODY .= '</tbody>';
+				}
+			$BODY .= '</table><br/>';
+		$BODY .= '</div>';
+
+	$PDF = $STYLE.$HEADER.$BODY;
+	$dompdf = new Dompdf();
+	$dompdf->set_option('isHtml5ParserEnabled', true);
+	$dompdf->set_option('isPhpEnabled', true);
+	$dompdf->loadHtml($PDF, "UTF-8");
+	$dompdf->setPaper("A4", "portrait");
+	$dompdf->set_option('defaultMediaType', 'all');
+	$dompdf->set_option('isFontSubsettingEnabled', true);
+	$dompdf->render();
+	$pdfOutput = $dompdf->output();
+	$base64PDF = base64_encode($pdfOutput);
+	return array(
+		'file_base64' => $base64PDF,
+		'filename' => $TURNOS['NOMBRE'].'.pdf'
+	);
+}
+function create_pdf_ticket($TURNO){ // TIENE CAMBIOS
+	list($dia, $mes, $año) = explode('-', $TURNO['FECHA']);
+// AGREGO FILA NRO. AFILIADO 
+// Y AGREGO LO DE LINEA XQ QUE ACEPTA TODAS LAS AGENDAS Y QUEDA RARO EL MENSAJE.
+	if($TURNO['CATEGORIA'] == 'CHEQUEO ANUAL'){
+		$LINEA_PROFESIONAL = "Establecimiento: ".$TURNO['PROFESIONAL'];
+		$LINEA_HORARIO = "Hora: ".$TURNO['HORARIO'];
+	}else{
+		$LINEA_PROFESIONAL = "Profesional Dr.: ".$TURNO['PROFESIONAL'];
+		$LINEA_HORARIO = "Consultorio Nº: ___ Hora: ".$TURNO['HORARIO'];
+	}
+	
+	$HTML = '<html>';
+		$HTML .= '<head>';
+			$HTML .= '<meta charset="UTF-8">';
+			$HTML .= '<style>';
+				$HTML .= 'body			{ font-family:monospace; font-size:14px; margin:0; padding:0; }';
+				$HTML .= '.ticket-container { width:70mm; margin:0 auto; padding:5px; }';
+				$HTML .= '.ticket		{ border:1px solid black; padding:5px; }';
+				$HTML .= '.title		{ font-weight:bold; text-align:center; margin-bottom:5px; font-size:14px; }';
+				$HTML .= '.line 		{ margin-bottom:3px; }';
+				$HTML .= '.firma 		{ margin-top:35px; border-top:1px solid black; text-align:center; font-size:11px; padding:2px 10px 0px 10px;}';
+				$HTML .= '@media print 	{ ';
+					$HTML .= '@page 		{ size:auto; margin:0; }';
+					$HTML .= 'body			{ margin:0; padding:0; }';
+				$HTML .= '}';
+			$HTML .= '</style>';
+		$HTML .= '</head>';
+		$HTML .= '<body>';
+			$HTML .= '<div class="ticket-container">';
+				$HTML .= '<div class="ticket">';
+					$HTML .= '<div class="title">DIRECCIÓN DE AYUDA SOCIAL PARA EL PERSONAL DEL CONGRESO DE LA NACIÓN</div>';
+					$HTML .= '<div class="line">TURNO '.$TURNO['CATEGORIA'].'</div>';
+					$HTML .= '<div class="line">Día: '.$dia.' Mes: '.$mes.' Año: '.$año.'</div>';
+					// $HTML .= '<div class="line">Profesional Dr.: '.$TURNO['PROFESIONAL'].'</div>';
+					// $HTML .= '<div class="line">Consultorio Nº: ___ Hora: '.$TURNO['HORARIO'].'</div>';
+					$HTML .= '<div class="line">'.$LINEA_PROFESIONAL.'</div>';
+					$HTML .= '<div class="line">'.$LINEA_HORARIO.'</div>';
+					$HTML .= '<div class="line">Paciente: '.$TURNO['AFILIADO'].'</div>';
+					$HTML .= '<div class="line">Nro. Afiliado: '.$TURNO['NRO_AFI'].'</div>';
+					$HTML .= '<div class="firma">Firma del agente interviniente</div>';
+				$HTML .= '</div>';
+			$HTML .= '</div>';
+		$HTML .= '</body>';
+	$HTML .= '</html>';
+	return $HTML;
+}
+function Estados2($ESTADO, $METODO = NULL, $MOTIVO = NULL){
+	if($METODO == 0){ $METODO = '-PORTAL';}else{ $METODO = '';}
+	if($MOTIVO != NULL) { $INFO = ' - <i class="fa-solid fa-triangle-exclamation fa-lg" style="color:Orange" title="'.$MOTIVO.'"></i>'; }else{ $INFO = ''; }
+	if($ESTADO == 0){ return 'ANULADO'.$METODO.' <i class="fa-solid fa-circle-xmark fa-lg" style="color:red"></i>'.$INFO;}
+	elseif($ESTADO == 1){ return 'RESERVADO'.$METODO.' <i class="fa-solid fa-circle fa-lg" style="color:grey"></i>'.$INFO;}
+	elseif($ESTADO == 10){ return 'AUSENTE <i class="fa-solid fa-circle-xmark fa-lg" style="color:purple"></i>'.$INFO;}
+	elseif($ESTADO == 11){ return 'PRESENTE <i class="fa-solid fa-circle-check fa-lg" style="color:green"></i>'.$INFO;}
+	else {return '';}
+}
+
 
 
 $PERMISOS_C[] = 0;

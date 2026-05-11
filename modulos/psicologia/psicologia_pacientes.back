@@ -1,13 +1,219 @@
 <?php 
-// require_once './db_connect_portal.sys';
-use Dompdf\Dompdf;
-use Dompdf\Options;
-
 $PALETA_COLORES['ERROR'] 		= '#B39DDB';
 $PALETA_COLORES['PASADO'] 		= '#A6A6A6';
 $PALETA_COLORES['HOY'] 			= '#FFD93D';
 $PALETA_COLORES['DISPONIBLES'] 	= '#48C774';
 $PALETA_COLORES['COMPLETOS'] 	= '#FFD93D';//2E7D32
+
+function generarSemanas($fechaInicio, $click = false) {
+    $fecha = new DateTime($fechaInicio);
+    $diasEnMes = $fecha->format('t');
+    $mes = $fecha->format('m');
+    $anio = $fecha->format('Y');
+    $semanas = [];
+    $semanaActual = 1;    
+    for ($dia = 1; $dia <= $diasEnMes; $dia++) {
+        $fecha->setDate($anio, $mes, $dia);
+        $diaSemana = (int) $fecha->format('N');        
+        if ($diaSemana >= 1 && $diaSemana <= 5) {
+			if($click == true){$CLICK = $fecha->format('Y-m-d');}else{ $CLICK = '';}
+            $semanas[$semanaActual][$diaSemana]['FECHA'] = (string)$dia;
+            $semanas[$semanaActual][$diaSemana]['COLOR'] = '';
+            $semanas[$semanaActual][$diaSemana]['TITLE'] = '';
+            $semanas[$semanaActual][$diaSemana]['CLICK'] = $CLICK;
+        }        
+        if ($diaSemana == 5) {
+            $semanaActual++;
+        }
+    }    
+    return $semanas;
+}
+function Update_Fecha(&$calendario, $dia, $color, $title, $fecha) {
+    foreach ($calendario as $semana => &$dias) {
+        foreach ($dias as $diaSemana => &$datos) {
+            if (isset($datos['FECHA']) && $datos['FECHA'] == $dia) {
+                $datos['COLOR'] = $color;
+                $datos['TITLE'] = $title;
+                $datos['CLICK'] = $fecha;
+                return true;
+            }
+        }
+    }
+    return false;
+}
+function Estados($ESTADO, $ICON = TRUE){
+	$RETURN = '';
+	if($ESTADO == 0){ 		$RETURN = $ICON ? '<i class="fa-solid fa-user-xmark fa-lg" style="color:red" 		title="ANULADO"></i>' 	: 'Anulado'; }
+	elseif($ESTADO == 1){	$RETURN = $ICON ? '<i class="fa-solid fa-user-minus fa-lg" style="color:grey"		title="RESERVADO"></i>' : 'Reservado'; }
+	elseif($ESTADO == 10){ 	$RETURN = $ICON ? '<i class="fa-solid fa-user-xmark fa-lg" style="color:purple"		title="AUSENTE"></i>' 	: 'Ausente'; }
+	elseif($ESTADO == 11){ 	$RETURN = $ICON ? '<i class="fa-solid fa-user-check fa-lg" style="color:green"		title="PRESENTE"></i>' 	: 'Presente'; }
+	return $RETURN;
+}
+function Pago($PAGO, $ICON = TRUE){
+	$RETURN = '';
+	if($PAGO == 0 || $PAGO == null || $PAGO == ''){ $RETURN = $ICON ? '<i class="fa-solid fa-dollar fa-lg" style="color:red" title="'.$PAGO.'"></i>' : '0'; }
+	else{$RETURN = $ICON ? '<i class="fa-solid fa-dollar fa-lg" style="color:green" title="'.$PAGO.'"></i>' : $PAGO ; }
+	return $RETURN;
+}
+
+
+if($ROUTE_OPC == 'Listado_Pacientes'){
+	$RETURN['COUNT'] = 0;
+	$RETURN['TOTAL'] = 0;
+	$RETURN['PAGINAS'] = 1;
+	$RETURN['ROWS'] = [];
+	if($PP['C'] != 1){EJE($RETURN);}
+	
+	$ARRAY_ORDER = array(1 => '`paciente` {METHOD}', 2 => '`telefono` {METHOD}');
+	$FORM = LISTADO_QUERY($ARRAY_ORDER);
+	$SEARCH = " WHERE `estado` = '1'";
+	if($FORM['SEARCH'] != NULL) {
+		$terminos = explode(' ', $FORM['SEARCH']);
+		$condiciones_busqueda = [];
+		foreach ($terminos as $termino) {
+			$t = trim($termino); 
+			if (!empty($t)) {
+				$condiciones_busqueda[] = "(`dni` LIKE '%".$t."%' OR `apellido` LIKE '%".$t."%' OR `nombre` LIKE '%".$t."%' OR `telefono` LIKE '%".$t."%')";
+			}
+		}
+		if(count($condiciones_busqueda) > 0) { $SEARCH .= " AND (" . implode(" AND ", $condiciones_busqueda) . ")";}
+	} 
+	$Que = QuerySelect("SELECT p.`id_paciente`, p.`telefono`, CONCAT(p.`apellido`, ', ', p.`nombre`) AS 'paciente', (SELECT t.`fecha` FROM ".$DBT['TURNOS']." t WHERE t.`id_paciente` = p.`id_paciente` AND CONCAT(t.`fecha`, ' ', t.`horario_inicio`) < NOW() AND t.`estado` != 0 ORDER BY t.`fecha` DESC, t.`horario_inicio` DESC LIMIT 1) AS 'ultima_sesion', (SELECT t.`fecha` FROM ".$DBT['TURNOS']." t WHERE t.`id_paciente` = p.`id_paciente` AND CONCAT(t.`fecha`, ' ', t.`horario_inicio`) >= NOW() AND t.`estado` != 0 ORDER BY t.`fecha` ASC, t.`horario_inicio` ASC LIMIT 1) AS 'proxima_sesion' FROM ".$DBT['PACIENTES']." p ".$SEARCH." ORDER BY ".$FORM['ORDENAR']." LIMIT ".$FORM['LIMIT']." ,".$FORM['ROWS']);
+	while($Row = QueryFetch($Que)){
+		$RETURN['COUNT']++;
+		$TMP = [];
+		$TMP['ID'] 						= $Row['id_paciente'];
+		$TMP['DATA']['PACIENTE'] 		= $Row['paciente'];
+		$TMP['DATA']['TELEFONO'] 		= $Row['telefono'];
+		$TMP['DATA']['ULTIMO_TURNO'] 	= ($Row['ultima_sesion'] != NULL) ? Fecha_Formato($Row['ultima_sesion']) : '-';
+		$TMP['DATA']['PROXIMO_TURNO'] 	= ($Row['proxima_sesion'] != NULL) ? Fecha_Formato($Row['proxima_sesion']) : '-';
+		array_push($RETURN['ROWS'], $TMP);
+		unset($TMP);
+	}
+	$Que = QuerySelect("SELECT COUNT(*) AS 'total' FROM ".$DBT['PACIENTES'].$SEARCH);
+	while($Row = QueryFetch($Que)){	
+		$RETURN['TOTAL'] = $Row['total'];
+		$RETURN['PAGINAS'] = ceil($RETURN['TOTAL']/$FORM['ROWS']);
+	}
+	EJE($RETURN);	
+}
+elseif($ROUTE_OPC == 'Procesar_Paciente'){
+	if($PP['A'] == 0){RJRE("Permiso denegado");}
+	
+	if(CIJE('CEI_ID_PACIENTE') === TRUE){RJRE("No se pudo procesar el identificador del paciente.");}
+	if(CIJE('CEI_DNI') === TRUE){RJRE("No se pudo procesar el DNI.");}
+	if(CIJE('CtS_NOMBRE') === TRUE){RJRE("No se pudo procesar el nombre ingresado.");} else{$sJ['CtS_NOMBRE'] = mb_convert_case($sJ['CtS_NOMBRE'], MB_CASE_TITLE, "UTF-8");} ;
+	if(CIJE('CtS_APELLIDO') === TRUE){RJRE("No se pudo procesar el apellido ingresado.");} else{$sJ['CtS_APELLIDO'] = mb_convert_case($sJ['CtS_APELLIDO'], MB_CASE_TITLE, "UTF-8");} ;
+	if(CIJE('CtS_TELEFONO') === TRUE){RJRE("No se pudo procesar el telefono.");}
+	if(strlen($sJ['CtS_TELEFONO']) > 20){ RJRE("El numero de telefono supera los caracteres máximos."); }
+	if($sJ['CtS_DIRECCION'] != ''){if(CIJE('CtS_DIRECCION') === TRUE){RJRE("No se pudo procesar la dirección.");}$sJ['CtS_DIRECCION'] = mb_convert_case($sJ['CtS_DIRECCION'], MB_CASE_TITLE, "UTF-8");}
+	if($sJ['CtS_LOCALIDAD'] != ''){if(CIJE('CtS_LOCALIDAD') === TRUE){RJRE("No se pudo procesar la localidad.");}$sJ['CtS_LOCALIDAD'] = mb_convert_case($sJ['CtS_LOCALIDAD'], MB_CASE_TITLE, "UTF-8");}
+	if($sJ['CIC_CORREO'] != ''){if(CIJE('CIC_CORREO') === TRUE)	{RJRE("No se pudo procesar la dirección.");}}
+	if($sJ['CFA_FECHA'] > date("Y-m-d")){ RJRE("Fecha Invalida"); }
+	if($sJ['CFA_FECHA'] != ''){if(CIJE('CFA_FECHA') === TRUE){RJRE("No se pudo procesar la dirección.");}}else{ $sJ['CFA_FECHA'] = 'NULL'; }
+	
+	if($sJ['CEI_ID_PACIENTE'] == '0'){
+		$QuePaciente = QuerySelect("SELECT `id_paciente`, CONCAT(`apellido`, ', ', `nombre`) AS 'paciente', `dni` FROM ".$DBT['PACIENTES']." WHERE `dni` = '".$sJ['CEI_DNI']."' OR (`apellido` = '".$sJ['CtS_APELLIDO']."' AND `nombre` = '".$sJ['CtS_NOMBRE']."') AND `estado` != '0'");
+		if(QueryNumRows($QuePaciente) >= 1){ 
+			while($RowPaciente = QueryFetch($QuePaciente)){
+				if($RowPaciente['dni'] == $sJ['CEI_DNI']){ RJRE("Ya existe un paciente con el DNI ingresado."); }
+				else{RJRE("Ya existe el paciente ".$RowPaciente['paciente'].".");}
+			}
+		}
+		QueryInsert("INSERT INTO ".$DBT['PACIENTES']."(`dni`, `nombre`, `apellido`, `telefono`, `correo`, `fecha_nacimiento`, `direccion`, `localidad`, `reg_user`, `reg_fecha`) VALUES ('".$sJ['CEI_DNI']."', '".$sJ['CtS_NOMBRE']."', '".$sJ['CtS_APELLIDO']."', '".$sJ['CtS_TELEFONO']."', '".$sJ['CIC_CORREO']."', '".$sJ['CFA_FECHA']."', '".$sJ['CtS_DIRECCION']."', '".$sJ['CtS_LOCALIDAD']."', '".$C_USER['ID']."',NOW())");
+		$MSJ = "Se agrego al sistema a ".$sJ['CtS_APELLIDO'].", ".$sJ['CtS_NOMBRE'] ;
+	}
+	else{
+		$QuePaciente = QuerySelect("SELECT `id_paciente`, CONCAT(`apellido`, ', ', `nombre`) AS 'paciente', `dni` FROM ".$DBT['PACIENTES']." WHERE `id_paciente` = '".$sJ['CEI_ID_PACIENTE']."' OR `dni` = '".$sJ['CEI_DNI']."' OR (`apellido` = '".$sJ['CtS_APELLIDO']."' AND `nombre` = '".$sJ['CtS_NOMBRE']."') AND `estado` != '0'");
+		// $QuePaciente = QuerySelect("SELECT `id_paciente` FROM ".$DBT['PACIENTES']." WHERE `id_paciente` = '".$sJ['ID_PACIENTE']."' AND `estado` != '0'");
+		if(QueryNumRows($QuePaciente) < 1){ RJRE("Ocurrió un error al buscar el paciente."); }
+		while($RowPaciente = QueryFetch($QuePaciente)){
+			if($RowPaciente['id_paciente'] != $sJ['CEI_ID_PACIENTE']){
+				if($RowPaciente['dni'] == $sJ['CEI_DNI']){ RJRE("Ya existe un paciente con el DNI ingresado."); }
+				else{RJRE("Ya existe el paciente ".$RowPaciente['paciente'].".");}
+			}
+		}
+		QueryUpdate("UPDATE ".$DBT['PACIENTES']." SET `dni` = '".$sJ['CEI_DNI']."', `nombre` = '".$sJ['CtS_NOMBRE']."',`apellido` = '".$sJ['CtS_APELLIDO']."', `telefono` = '".$sJ['CtS_TELEFONO']."', `correo` = '".$sJ['CIC_CORREO']."', `fecha_nacimiento` = '".$sJ['CFA_FECHA']."', `direccion` = '".$sJ['CtS_DIRECCION']."', `localidad` = '".$sJ['CtS_LOCALIDAD']."' WHERE `estado` != '0' AND `id_paciente` = '".$sJ['CEI_ID_PACIENTE']."'");
+		$MSJ = "Se modifico la información de ".$sJ['CtS_APELLIDO'].", ".$sJ['CtS_NOMBRE'] ;
+	} 
+	RJRO($MSJ);
+}
+elseif($ROUTE_OPC == 'Ver_Paciente'){
+	$RETURN['ID_PACIENTE'] = 0;
+	if($PP['C'] != 1){EJE($RETURN);}
+	if(CIJE('CEI_ID') === TRUE){EJE($RETURN);};
+	$Que = QuerySelect("SELECT `id_paciente`, `dni`, `nombre`, `apellido`, `telefono`, `correo`, `fecha_nacimiento`, `direccion`, `localidad` FROM ".$DBT['PACIENTES']." WHERE `estado` != '0' AND `id_paciente` = '".$sJ['CEI_ID']."'");
+	if(QueryNumRows($Que) > 0){
+		while($Row = QueryFetch($Que)){
+			$RETURN['ID_PACIENTE'] 	= $Row['id_paciente'];
+			$RETURN['DNI'] 			= $Row['dni'];
+			$RETURN['NOMBRE'] 		= $Row['nombre'];
+			$RETURN['APELLIDO'] 	= $Row['apellido'];
+			$RETURN['TELEFONO'] 	= $Row['telefono'];
+			$RETURN['CORREO'] 		= $Row['correo'];
+			$RETURN['FECHA'] 		= fecha_formato($Row['fecha_nacimiento']);
+			$RETURN['DIRECCION'] 	= $Row['direccion'];
+			$RETURN['LOCALIDAD'] 	= $Row['localidad'];
+		}
+	}
+	EJE($RETURN);
+}
+elseif($ROUTE_OPC == 'Listado_Turnos_Paciente'){ //REVISAR AL COMPLETAR TODO
+	$RETURN['COUNT'] = 0;
+	$RETURN['TOTAL'] = 0;
+	$RETURN['PAGINAS'] = 1;
+	$RETURN['ROWS'] = [];
+	if($PP['C'] != 1 || CIJE('CtU_ADVANCE')){EJE($RETURN);}
+	$ARRAY_ORDER = array(1 => 'T.`fecha` DESC, T.`horario_inicio` DESC');
+	$FORM = LISTADO_QUERY($ARRAY_ORDER);
+	$SEARCH = " WHERE T.`id_paciente`='".$sJ['CtU_ADVANCE']."'";
+
+	$Que = QuerySelect("SELECT T.`id_turno`, T.`fecha`, T.`horario_inicio`, T.`horario_fin`, T.`estado`, P.`valor_pagado` FROM ".$DBT['TURNOS']." T LEFT JOIN ".$DBT['PAGOS']." P ON P.`id_turno` = T.`id_turno` " .$SEARCH." ORDER BY ".$FORM['ORDENAR']." LIMIT ".$FORM['LIMIT']." ,".$FORM['ROWS']);
+	while($Row = QueryFetch($Que)){
+		$RETURN['COUNT']++;
+		$TMP = [];
+		$TMP['ID'] 						= $Row['id_turno'];
+		$TMP['DATA']['FECHA'] 			= Fecha_Formato($Row['fecha']);
+		$TMP['DATA']['HORARIO']	 		= Hora_Formato($Row['horario_inicio'])." - ".Hora_Formato($Row['horario_fin']);
+		$TMP['DATA']['ESTADO'] 			= Estados($Row['estado'])." ".Pago($Row['valor_pagado']);
+		array_push($RETURN['ROWS'], $TMP);
+		unset($TMP);
+	}
+	$Que = QuerySelect("SELECT COUNT(*) AS 'total' FROM ".$DBT['TURNOS']." T LEFT JOIN ".$DBT['PAGOS']." P ON P.`id_turno` = T.`id_turno` " .$SEARCH." ORDER BY ".$FORM['ORDENAR']." LIMIT ".$FORM['LIMIT']." ,".$FORM['ROWS']);
+	while($Row = QueryFetch($Que)){	
+		$RETURN['TOTAL'] = $Row['total'];
+		$RETURN['PAGINAS'] = ceil($RETURN['TOTAL']/$FORM['ROWS']);
+	}
+	EJE($RETURN);
+}
+elseif($ROUTE_OPC == 'Ver_Estado_Turno'){
+	$RETURN['ID_PACIENTE'] = 0;
+	if($PP['C'] != 1){EJE($RETURN);}
+	if(CIJE('CEI_ID_TURNO') === TRUE){EJE($RETURN);};
+	
+	$Que = QuerySelect("SELECT T.`id_paciente`, T.`estado`, T.`valor_sesion`, P.`valor_pagado`, T.`observaciones` FROM ".$DBT['TURNOS']." T LEFT JOIN ".$DBT['PAGOS']." P ON P.`id_turno` = T.`id_turno` WHERE T.`id_turno` = '".$sJ['CEI_ID_TURNO']."'");
+	if(QueryNumRows($Que) > 0){
+		while($Row = QueryFetch($Que)){
+			$RETURN['ID_PACIENTE'] 		= $Row['id_paciente'];
+			$RETURN['ESTADO'] 			= Estados($Row['estado'], FALSE);
+			$RETURN['VALOR_SESION'] 	= $Row['valor_sesion'];
+			$RETURN['VALOR_PAGADO'] 	= Pago($Row['valor_pagado'],FALSE);
+			$RETURN['OBSERVACIONES'] 	= $Row['observaciones'];
+		}
+	}
+	EJE($RETURN);	
+}
+else{
+	EE("NO_SE_PUEDE_PROCESAR_LA_SOLICITUD");
+}
+
+
+
+// CODIGO DAS 
+
+// require_once './db_connect_portal.sys';
+use Dompdf\Dompdf;
+use Dompdf\Options;
 
 $CANCELAR_TURNO = 1; // HORAS DE ANTELACION PARA CANCELAR UN TURNO // DUPLICADO EN PORTAL
 
@@ -150,7 +356,7 @@ function create_pdf_ticket($TURNO){ // TIENE CAMBIOS
 	$HTML .= '</html>';
 	return $HTML;
 }
-function Estados($ESTADO, $METODO = NULL, $MOTIVO = NULL){
+function Estados2($ESTADO, $METODO = NULL, $MOTIVO = NULL){
 	if($METODO == 0){ $METODO = '-PORTAL';}else{ $METODO = '';}
 	if($MOTIVO != NULL) { $INFO = ' - <i class="fa-solid fa-triangle-exclamation fa-lg" style="color:Orange" title="'.$MOTIVO.'"></i>'; }else{ $INFO = ''; }
 	if($ESTADO == 0){ return 'ANULADO'.$METODO.' <i class="fa-solid fa-circle-xmark fa-lg" style="color:red"></i>'.$INFO;}
@@ -158,42 +364,6 @@ function Estados($ESTADO, $METODO = NULL, $MOTIVO = NULL){
 	elseif($ESTADO == 10){ return 'AUSENTE <i class="fa-solid fa-circle-xmark fa-lg" style="color:purple"></i>'.$INFO;}
 	elseif($ESTADO == 11){ return 'PRESENTE <i class="fa-solid fa-circle-check fa-lg" style="color:green"></i>'.$INFO;}
 	else {return '';}
-}
-function generarSemanas($fechaInicio, $click = false) {
-    $fecha = new DateTime($fechaInicio);
-    $diasEnMes = $fecha->format('t');
-    $mes = $fecha->format('m');
-    $anio = $fecha->format('Y');
-    $semanas = [];
-    $semanaActual = 1;    
-    for ($dia = 1; $dia <= $diasEnMes; $dia++) {
-        $fecha->setDate($anio, $mes, $dia);
-        $diaSemana = (int) $fecha->format('N');        
-        if ($diaSemana >= 1 && $diaSemana <= 5) {
-			if($click == true){$CLICK = $fecha->format('Y-m-d');}else{ $CLICK = '';}
-            $semanas[$semanaActual][$diaSemana]['FECHA'] = (string)$dia;
-            $semanas[$semanaActual][$diaSemana]['COLOR'] = '';
-            $semanas[$semanaActual][$diaSemana]['TITLE'] = '';
-            $semanas[$semanaActual][$diaSemana]['CLICK'] = $CLICK;
-        }        
-        if ($diaSemana == 5) {
-            $semanaActual++;
-        }
-    }    
-    return $semanas;
-}
-function Update_Fecha(&$calendario, $dia, $color, $title, $fecha) {
-    foreach ($calendario as $semana => &$dias) {
-        foreach ($dias as $diaSemana => &$datos) {
-            if (isset($datos['FECHA']) && $datos['FECHA'] == $dia) {
-                $datos['COLOR'] = $color;
-                $datos['TITLE'] = $title;
-                $datos['CLICK'] = $fecha;
-                return true;
-            }
-        }
-    }
-    return false;
 }
 /* En caso de actualizacion de los template modificar portal de afiliados */ 
 function TemplateAlta($AFILIADO,$TURNO, $TURNERA, $MENSAJE){
@@ -238,149 +408,13 @@ function TemplateCancelacion($AFILIADO,$TURNO, $TURNERA){
 	return $RETURN;
 }
 
-/* 
+
 $PERMISOS_C[] = 0;
 $PERMISOS_A[] = 0;
 $PERMISOS_B[] = 0;
 $PERMISOS_M[] = 0;
 $PERMISOS_E[] = 0;
 $QuePermisos = QuerySelect("SELECT `id_categoria`,CASE WHEN `permiso` LIKE '%C%' THEN 1 ELSE 0 END AS 'C', CASE WHEN `permiso` LIKE '%A%' THEN 1 ELSE 0 END AS 'A', CASE WHEN `permiso` LIKE '%B%' THEN 1 ELSE 0 END AS 'B', CASE WHEN `permiso` LIKE '%M%' THEN 1 ELSE 0 END AS 'M', CASE WHEN `permiso` LIKE '%E%' THEN 1 ELSE 0 END AS 'E' FROM ".$DBT['PERMISOS_TURNERA']." WHERE `id_usuario`='".$C_USER['ID']."' AND (permiso LIKE '%C%' OR permiso LIKE '%A%' OR permiso LIKE '%B%' OR permiso LIKE '%E%')");
- */
-if($ROUTE_OPC == 'Listado_Pacientes'){
-	$RETURN['COUNT'] = 0;
-	$RETURN['TOTAL'] = 0;
-	$RETURN['PAGINAS'] = 1;
-	$RETURN['ROWS'] = [];
-	if($PP['C'] != 1){EJE($RETURN);}
-	
-	$ARRAY_ORDER = array(1 => '`paciente` {METHOD}', 2 => '`telefono` {METHOD}');
-	$FORM = LISTADO_QUERY($ARRAY_ORDER);
-	$SEARCH = " WHERE `estado` = '1'";
-	if($FORM['SEARCH'] != NULL) {
-		$terminos = explode(' ', $FORM['SEARCH']);
-		$condiciones_busqueda = [];
-		foreach ($terminos as $termino) {
-			$t = trim($termino); 
-			if (!empty($t)) {
-				$condiciones_busqueda[] = "(`dni` LIKE '%".$t."%' OR `apellido` LIKE '%".$t."%' OR `nombre` LIKE '%".$t."%' OR `telefono` LIKE '%".$t."%')";
-			}
-		}
-		if(count($condiciones_busqueda) > 0) { $SEARCH .= " AND (" . implode(" AND ", $condiciones_busqueda) . ")";}
-	} 
-	$Que = QuerySelect("SELECT `id_paciente`, `telefono`, CONCAT( `apellido`, ', ', `nombre`) AS 'paciente' FROM ".$DBT['PACIENTES'].$SEARCH." ORDER BY ".$FORM['ORDENAR']." LIMIT ".$FORM['LIMIT']." ,".$FORM['ROWS']);
-	while($Row = QueryFetch($Que)){
-		$RETURN['COUNT']++;
-		$TMP = [];
-		$TMP['ID'] 						= $Row['id_paciente'];
-		$TMP['DATA']['PACIENTE'] 		= $Row['paciente'];
-		$TMP['DATA']['TELEFONO'] 		= $Row['telefono'];
-		$TMP['DATA']['ULTIMO_TURNO'] 	= 'XD';
-		$TMP['DATA']['PROXIMO_TURNO'] 	= 'MI REY';
-		array_push($RETURN['ROWS'], $TMP);
-		unset($TMP);
-	}
-	$Que = QuerySelect("SELECT COUNT(*) AS 'total' FROM ".$DBT['PACIENTES'].$SEARCH);
-	while($Row = QueryFetch($Que)){	
-		$RETURN['TOTAL'] = $Row['total'];
-		$RETURN['PAGINAS'] = ceil($RETURN['TOTAL']/$FORM['ROWS']);
-	}
-	EJE($RETURN);	
-}
-elseif($ROUTE_OPC == 'Procesar_Paciente'){
-	if($PP['A'] == 0){RJRE("Permiso denegado");}
-	
-	if(CIJE('CEI_ID_PACIENTE') === TRUE){RJRE("No se pudo procesar el identificador del paciente.");}
-	if(CIJE('CEI_DNI') === TRUE){RJRE("No se pudo procesar el DNI.");}
-	if(CIJE('CtS_NOMBRE') === TRUE){RJRE("No se pudo procesar el nombre ingresado.");} else{$sJ['CtS_NOMBRE'] = mb_convert_case($sJ['CtS_NOMBRE'], MB_CASE_TITLE, "UTF-8");} ;
-	if(CIJE('CtS_APELLIDO') === TRUE){RJRE("No se pudo procesar el apellido ingresado.");} else{$sJ['CtS_APELLIDO'] = mb_convert_case($sJ['CtS_APELLIDO'], MB_CASE_TITLE, "UTF-8");} ;
-	if(CIJE('CtS_TELEFONO') === TRUE){RJRE("No se pudo procesar el telefono.");}
-	if(strlen($sJ['CtS_TELEFONO']) > 20){ RJRE("El numero de telefono supera los caracteres máximos."); }
-	if($sJ['CtS_DIRECCION'] != ''){if(CIJE('CtS_DIRECCION') === TRUE){RJRE("No se pudo procesar la dirección.");}$sJ['CtS_DIRECCION'] = mb_convert_case($sJ['CtS_DIRECCION'], MB_CASE_TITLE, "UTF-8");}
-	if($sJ['CtS_LOCALIDAD'] != ''){if(CIJE('CtS_LOCALIDAD') === TRUE){RJRE("No se pudo procesar la localidad.");}$sJ['CtS_LOCALIDAD'] = mb_convert_case($sJ['CtS_LOCALIDAD'], MB_CASE_TITLE, "UTF-8");}
-	if($sJ['CIC_CORREO'] != ''){if(CIJE('CIC_CORREO') === TRUE)	{RJRE("No se pudo procesar la dirección.");}}
-	if($sJ['CFA_FECHA'] > date("Y-m-d")){ RJRE("Fecha Invalida"); }
-	if($sJ['CFA_FECHA'] != ''){if(CIJE('CFA_FECHA') === TRUE){RJRE("No se pudo procesar la dirección.");}}else{ $sJ['CFA_FECHA'] = 'NULL'; }
-	
-	if($sJ['CEI_ID_PACIENTE'] == '0'){
-		$QuePaciente = QuerySelect("SELECT `id_paciente`, CONCAT(`apellido`, ', ', `nombre`) AS 'paciente', `dni` FROM ".$DBT['PACIENTES']." WHERE `dni` = '".$sJ['CEI_DNI']."' OR (`apellido` = '".$sJ['CtS_APELLIDO']."' AND `nombre` = '".$sJ['CtS_NOMBRE']."') AND `estado` != '0'");
-		if(QueryNumRows($QuePaciente) >= 1){ 
-			while($RowPaciente = QueryFetch($QuePaciente)){
-				if($RowPaciente['dni'] == $sJ['CEI_DNI']){ RJRE("Ya existe un paciente con el DNI ingresado."); }
-				else{RJRE("Ya existe el paciente ".$RowPaciente['paciente'].".");}
-			}
-		}
-		QueryInsert("INSERT INTO ".$DBT['PACIENTES']."(`dni`, `nombre`, `apellido`, `telefono`, `correo`, `fecha_nacimiento`, `direccion`, `localidad`, `reg_user`, `reg_fecha`) VALUES ('".$sJ['CEI_DNI']."', '".$sJ['CtS_NOMBRE']."', '".$sJ['CtS_APELLIDO']."', '".$sJ['CtS_TELEFONO']."', '".$sJ['CIC_CORREO']."', '".$sJ['CFA_FECHA']."', '".$sJ['CtS_DIRECCION']."', '".$sJ['CtS_LOCALIDAD']."', '".$C_USER['ID']."',NOW())");
-		$MSJ = "Se agrego al sistema a ".$sJ['CtS_APELLIDO'].", ".$sJ['CtS_NOMBRE'] ;
-	}
-	else{
-		$QuePaciente = QuerySelect("SELECT `id_paciente`, CONCAT(`apellido`, ', ', `nombre`) AS 'paciente', `dni` FROM ".$DBT['PACIENTES']." WHERE `id_paciente` = '".$sJ['CEI_ID_PACIENTE']."' OR `dni` = '".$sJ['CEI_DNI']."' OR (`apellido` = '".$sJ['CtS_APELLIDO']."' AND `nombre` = '".$sJ['CtS_NOMBRE']."') AND `estado` != '0'");
-		// $QuePaciente = QuerySelect("SELECT `id_paciente` FROM ".$DBT['PACIENTES']." WHERE `id_paciente` = '".$sJ['ID_PACIENTE']."' AND `estado` != '0'");
-		if(QueryNumRows($QuePaciente) < 1){ RJRE("Ocurrió un error al buscar el paciente."); }
-		while($RowPaciente = QueryFetch($QuePaciente)){
-			if($RowPaciente['id_paciente'] != $sJ['CEI_ID_PACIENTE']){
-				if($RowPaciente['dni'] == $sJ['CEI_DNI']){ RJRE("Ya existe un paciente con el DNI ingresado."); }
-				else{RJRE("Ya existe el paciente ".$RowPaciente['paciente'].".");}
-			}
-		}
-		QueryUpdate("UPDATE ".$DBT['PACIENTES']." SET `dni` = '".$sJ['CEI_DNI']."', `nombre` = '".$sJ['CtS_NOMBRE']."',`apellido` = '".$sJ['CtS_APELLIDO']."', `telefono` = '".$sJ['CtS_TELEFONO']."', `correo` = '".$sJ['CIC_CORREO']."', `fecha_nacimiento` = '".$sJ['CFA_FECHA']."', `direccion` = '".$sJ['CtS_DIRECCION']."', `localidad` = '".$sJ['CtS_LOCALIDAD']."' WHERE `estado` != '0' AND `id_paciente` = '".$sJ['CEI_ID_PACIENTE']."'");
-		$MSJ = "Se modifico la información de ".$sJ['CtS_APELLIDO'].", ".$sJ['CtS_NOMBRE'] ;
-	} 
-	RJRO($MSJ);
-}
-elseif($ROUTE_OPC == 'Ver_Paciente'){
-	$RETURN['ID_PACIENTE'] = 0;
-	if($PP['C'] != 1){EJE($RETURN);}
-	if(CIJE('CEI_ID') === TRUE){EJE($RETURN);};
-	$Que = QuerySelect("SELECT `id_paciente`, `dni`, `nombre`, `apellido`, `telefono`, `correo`, `fecha_nacimiento`, `direccion`, `localidad` FROM ".$DBT['PACIENTES']." WHERE `estado` != '0' AND `id_paciente` = '".$sJ['CEI_ID']."'");
-	if(QueryNumRows($Que) > 0){
-		while($Row = QueryFetch($Que)){
-			$RETURN['ID_PACIENTE'] 	= $Row['id_paciente'];
-			$RETURN['DNI'] 			= $Row['dni'];
-			$RETURN['NOMBRE'] 		= $Row['nombre'];
-			$RETURN['APELLIDO'] 	= $Row['apellido'];
-			$RETURN['TELEFONO'] 	= $Row['telefono'];
-			$RETURN['CORREO'] 		= $Row['correo'];
-			$RETURN['FECHA'] 		= fecha_formato($Row['fecha_nacimiento']);
-			$RETURN['DIRECCION'] 	= $Row['direccion'];
-			$RETURN['LOCALIDAD'] 	= $Row['localidad'];
-		}
-	}
-	EJE($RETURN);
-}
-elseif($ROUTE_OPC == 'Listado_Turnos_Paciente'){ //REVISAR AL COMPLETAR TODO
-	$RETURN['COUNT'] = 0;
-	$RETURN['TOTAL'] = 0;
-	$RETURN['PAGINAS'] = 1;
-	$RETURN['ROWS'] = [];
-	if($PP['C'] != 1 || CIJE('CtU_ADVANCE')){EJE($RETURN);}
-	$ARRAY_ORDER = array(1 => 'T.`fecha` DESC, T.`horario_inicio` DESC');
-	$FORM = LISTADO_QUERY($ARRAY_ORDER);
-	$SEARCH = " WHERE T.`id_paciente`='".$sJ['CtU_ADVANCE']."'";
-
-	$Que = QuerySelect("SELECT T.`id_turno`, T.`fecha`, T.`horario_inicio`, T.`horario_fin`, T.`estado` FROM ".$DBT['TURNOS']." T".$SEARCH." ORDER BY ".$FORM['ORDENAR']." LIMIT ".$FORM['LIMIT']." ,".$FORM['ROWS']);
-	while($Row = QueryFetch($Que)){
-		$RETURN['COUNT']++;
-		$TMP = [];
-		$TMP['ID'] 						= $Row['id_turno'];
-		$TMP['DATA']['FECHA'] 			= Fecha_Formato($Row['fecha']);
-		$TMP['DATA']['HORARIO']	 		= Hora_Formato($Row['horario_inicio'])." - ".Hora_Formato($Row['horario_fin']);
-		$TMP['DATA']['ESTADO'] 			= $Row['estado'];
-		array_push($RETURN['ROWS'], $TMP);
-		unset($TMP);
-	}
-	$Que = QuerySelect("SELECT COUNT(*) AS 'total' FROM ".$DBT['TURNOS']." T".$SEARCH." ORDER BY ".$FORM['ORDENAR']." LIMIT ".$FORM['LIMIT']." ,".$FORM['ROWS']);
-	while($Row = QueryFetch($Que)){	
-		$RETURN['TOTAL'] = $Row['total'];
-		$RETURN['PAGINAS'] = ceil($RETURN['TOTAL']/$FORM['ROWS']);
-	}
-	EJE($RETURN);
-}
-
-
-
-
-
-
 
 if(QueryNumRows($QuePermisos) > 0 ){
 	while($RowPermisos = QueryFetch($QuePermisos)){

@@ -4,21 +4,20 @@ $TABS['A'] =  array('ICON' => '<i class="fa-regular fa-address-book"></i>', 'TIT
 
 $TABLE['A']['COLUMNAS']			= array(
 	array('COLUMNA' => 'Paciente'),
-	array('COLUMNA' => 'Telefono'),
 	array('COLUMNA' => 'Ultima', 'DB' => 'ULTIMO_TURNO'),
 	array('COLUMNA' => 'Proxima', 'DB' => 'PROXIMO_TURNO'),
 );
 $TABLE['A']['AJAX_URL'] 		= $LINK_BACK.'/Listado_Pacientes';
 $TABLE['A']['HERRAMIENTAS_NEW'] = array(
 	array('TITLE' => 'ALTA PACIENTE', 	'ICON' => '<i class="fa-solid fa-user-plus fa-lg"></i>', 	'FN' => 'Display_Paciente', 	'CLICK' => 'Display_Paciente()', 		'PERMISOS' => 'A', 'ROW_SELECTED' => FALSE),
-	array('TITLE' => 'INFO PACIENTE', 	'ICON' => '<i class="fa-solid fa-address-book fa-lg"></i>', 'FN' => 'Display_Ver_Paciente', 'CLICK' => 'Display_Ver_Paciente()',	'PERMISOS' => 'C', 'ROW_SELECTED' => TRUE),
 	array('TITLE' => 'VER TURNOS',		'ICON' => '<i class="fa-solid fa-list fa-lg"></i>', 		'FN' => 'Display_A_Ver', 'CLICK' => 'Display_A_Ver()',	'PERMISOS' => 'C', 'ROW_SELECTED' => TRUE),
 	array('TITLE' => 'BUSCAR', 			'ICON' => '<i class="fa-brands fa-searchengin fa-lg"></i>', 'FN' => 'Display_A_QuickSearch','CLICK' => 'Display_A_QuickSearch()',	'PERMISOS' => 'C', 'ROW_SELECTED' => FALSE),
+	array('TITLE' => 'ACTUALIZAR', 'ICON' => '<i class="fa-solid fa-rotate fa-lg"></i>', 'FN' => NULL, 'CLICK' => 'TableRefresh(\'A\')', 'PERMISOS' => 'C', 'ROW_SELECTED' => FALSE),
 	
+	// array('TITLE' => 'INFO PACIENTE', 	'ICON' => '<i class="fa-solid fa-address-book fa-lg"></i>', 'FN' => 'Display_Info_Paciente', 'CLICK' => 'Display_Info_Paciente()',	'PERMISOS' => 'C', 'ROW_SELECTED' => TRUE),
 	// array('TITLE' => 'VER', 'ICON' => '<i class="fa-regular fa-eye fa-lg"></i>', 'FN' => 'Display_A_Ver', 'CLICK' => 'Display_A_Ver()', 'PERMISOS' => 'C', 'ROW_SELECTED' => TRUE),
 	// array('TITLE' => 'ANULAR TURNO', 'ICON' => '<i class="fa-solid fa-calendar-xmark fa-lg"></i>', 'FN' => 'Display_A_Anular', 'CLICK' => 'Display_A_Anular()', 'PERMISOS' => 'A', 'ROW_SELECTED' => FALSE),
 	// array('TITLE' => 'BUSCAR', 'ICON' => '<i class="fa-brands fa-searchengin fa-lg"></i>', 'FN' => 'Display_A_QuickSearch', 'CLICK' => 'Display_A_QuickSearch()', 'PERMISOS' => 'C', 'ROW_SELECTED' => FALSE),
-	array('TITLE' => 'ACTUALIZAR', 'ICON' => '<i class="fa-solid fa-rotate fa-lg"></i>', 'FN' => NULL, 'CLICK' => 'TableRefresh(\'A\')', 'PERMISOS' => 'C', 'ROW_SELECTED' => FALSE),
 );
 $TABLE['A']['SETTING'] 			= array('ORDENAR' => "TRUE", 'ORDENAR_COL' => 1,'ORDENAR_METHOD' => 'DESC', 'DOBLE_CLICK' => 'Display_Ver_Paciente');
 $TABLE['A']['QUICK_SEARCH']		= "Buscar Apellido y Nombre o DNI";
@@ -140,10 +139,12 @@ if(in_array('Display_A_Ver', $TABLE_FUNCTION)){
 						);
 						$SUBTABLE_FICHA['AJAX_URL'] 		= $LINK_BACK.'/Listado_Turnos_Paciente';
 						$SUBTABLE_FICHA['HERRAMIENTAS_NEW'] 	= array(
-							array('TITLE' => 'AGREGAR', 'ICON' => '<i class="fa-solid fa-folder-plus fa-lg"></i>', 'FN' => 'Display_A_Turnos', 'CLICK' => 'TableRowClick(\'FICHA\',\'\');Display_A_Turnos()', 'PERMISOS' => 'A', 'ROW_SELECTED' => FALSE),
-							array('TITLE' => 'ANULAR', 'ICON' => '<i class="fa-solid fa-trash-can fa-lg"></i>', 'FN' => 'Display_A_Turnos_Borrar', 'CLICK' => 'Display_A_Turnos_Borrar()', 'PERMISOS' => 'B', 'ROW_SELECTED' => TRUE),
-							array('TITLE' => 'IMPRIMIR', 'ICON' => '<i class="fa-solid fa-print fa-lg"></i>', 'FN' => 'Display_A_Imprimir', 'CLICK' => 'Display_A_Imprimir()', 'PERMISOS' => 'A', 'ROW_SELECTED' => TRUE),
+							array('TITLE' => 'VER', 'ICON' => '<i class="fa-regular fa-eye fa-lg"></i>', 'FN' => 'Display_Ver_Turno', 'CLICK' => 'Display_Ver_Turno()', 'PERMISOS' => 'C', 'ROW_SELECTED' => TRUE),
 							array('TITLE' => 'ACTUALIZAR', 'ICON' => '<i class="fa-solid fa-rotate fa-lg"></i>', 'FN' => NULL, 'CLICK' => 'TableRefresh(\'FICHA\')', 'PERMISOS' => 'C', 'ROW_SELECTED' => FALSE),
+							
+							// array('TITLE' => 'AGREGAR', 'ICON' => '<i class="fa-solid fa-folder-plus fa-lg"></i>', 'FN' => 'Display_A_Turnos', 'CLICK' => 'TableRowClick(\'FICHA\',\'\');Display_A_Turnos()', 'PERMISOS' => 'A', 'ROW_SELECTED' => FALSE),
+							// array('TITLE' => 'ANULAR', 'ICON' => '<i class="fa-solid fa-trash-can fa-lg"></i>', 'FN' => 'Display_A_Turnos_Borrar', 'CLICK' => 'Display_A_Turnos_Borrar()', 'PERMISOS' => 'B', 'ROW_SELECTED' => TRUE),
+							// array('TITLE' => 'IMPRIMIR', 'ICON' => '<i class="fa-solid fa-print fa-lg"></i>', 'FN' => 'Display_A_Imprimir', 'CLICK' => 'Display_A_Imprimir()', 'PERMISOS' => 'A', 'ROW_SELECTED' => TRUE),
 						); 
 						$SUBTABLE_FICHA['SETTING'] 			= array('ORDENAR' => "FALSE", 'ORDENAR_COL' => 1,'ORDENAR_METHOD' => 'DESC', 'DOBLE_CLICK' => 'Display_A_Turnos_Borrar');
 						$TMP['BODY'] .= CreateMainTable('FICHA','Ficha', $SUBTABLE_FICHA, TRUE);
@@ -168,76 +169,59 @@ if(in_array('Display_A_Ver', $TABLE_FUNCTION)){
 	array_push($FUNCTIONS,$JS_TMP);
 }
 
-
-
-
-
-
-
-
-
-
-
-/* if(in_array('Display_A_Ver', $TABLE_FUNCTION)){
+if(in_array('Display_Ver_Turno', $TABLE_FUNCTION)){
 	unset($TMP);
-	$TMP['MODAL']['ID']			= 'FICHA';
-	$TMP['MODAL']['TITLE']		= 'Ver Ficha';
-	$TMP['MODAL']['SIZE']		= 'XL';
+	$TMP['MODAL']['ID']			= 'TURNO';
+	$TMP['MODAL']['TITLE']		= 'Turno';
+	$TMP['MODAL']['SIZE']		= 'LG';
 	
 	$TMP['FOOTER']['CLOSE']		= array('ID' => 'Cerrar');
 	
-	$TMP['BODY'] = '<div class="card border-dark mx-auto mt-4 mb-0" style="width: 98%">';
-		$TMP['BODY'] .= '<div class="card-header card-main  gradient_card rounded-2 text-light" id="subcard-main" style="--bs-bg-opacity: .95;">';
-			$TMP['BODY'] .= '<div class="d-grid gap-2 d-flex justify-content-center">';
-				$TMP['BODY'] .= '<ul class="nav nav-pills subtabs-buttons">';					
-					$TMP['BODY'] .= '<li class="nav-item nav-Ficha">';
-						$TMP['BODY'] .= '<button class="nav-link text-light mx-1" type="button" role="tab" aria-controls="FICHA" aria-selected="false">';
-							$TMP['BODY'] .= '<i class="fa-solid fa-address-book fa-lg"></i> <div class="d-inline-block"><span class="d-none d-xl-block text-center subcardcard_header_btn">Ficha</span></div>';									
-						$TMP['BODY'] .= '</button>';
-					$TMP['BODY'] .= '</li>';
-				$TMP['BODY'] .= '</ul>';
+	$TMP['BODY'] = '<input type="hidden" id="AUTOFOCUS">';
+	$TMP['BODY'] .= '<form id="'.$TMP['MODAL']['ID'].'_FORM" autocomplete="off">';
+		$TMP['BODY'] .= CreateFormInput(array('ID' => 'id_paciente', 'TIPO' => 'hidden', 'VALIDATE' => 'CEI', 'REQUIRED' => TRUE, 'VALUE' => 0));
+		$TMP['BODY'] .= '<div class="row">';
+			$TMP['BODY'] .= '<div class="col-4 col-lg-4">';
+				$TMP['BODY'] .= CreateFormInput(array('ID' => 'asistencia', 	'TIPO' => 'text', 	'VALIDATE' => 'CtS', 	'REQUIRED' => TRUE, 'MAXLENGTH' => 50, 'LOWERCASE' => TRUE, 'READONLY' => TRUE));
 			$TMP['BODY'] .= '</div>';
-		$TMP['BODY'] .= '</div>';
-		$TMP['BODY'] .= '<div class="card text-center border border-0">';
-			$TMP['BODY'] .= '<div class="card-body px-4 py-2 overflow-auto" id="subcardcard-body-main"> ';
-				$TMP['BODY'] .= '<div class="tab-content subtabs-body">';			
-					$TMP['BODY'] .= '<div class="tab-pane fade" role="tabpanel" aria-labelledby="FICHA" tabindex="1">';
-						$SUBTABLE_FICHA['COLUMNAS']			= array(
-							array('COLUMNA' => 'Turnera'),
-							array('COLUMNA' => 'Fecha'),
-							array('COLUMNA' => 'Hora'),
-							array('COLUMNA' => 'Estado'),
-						);
-						$SUBTABLE_FICHA['AJAX_URL'] 		= $LINK_BACK.'/Listado_Turnos';
-						$SUBTABLE_FICHA['HERRAMIENTAS_NEW'] 	= array(
-							array('TITLE' => 'AGREGAR', 'ICON' => '<i class="fa-solid fa-folder-plus fa-lg"></i>', 'FN' => 'Display_A_Turnos', 'CLICK' => 'TableRowClick(\'FICHA\',\'\');Display_A_Turnos()', 'PERMISOS' => 'A', 'ROW_SELECTED' => FALSE),
-							array('TITLE' => 'ANULAR', 'ICON' => '<i class="fa-solid fa-trash-can fa-lg"></i>', 'FN' => 'Display_A_Turnos_Borrar', 'CLICK' => 'Display_A_Turnos_Borrar()', 'PERMISOS' => 'B', 'ROW_SELECTED' => TRUE),
-							array('TITLE' => 'IMPRIMIR', 'ICON' => '<i class="fa-solid fa-print fa-lg"></i>', 'FN' => 'Display_A_Imprimir', 'CLICK' => 'Display_A_Imprimir()', 'PERMISOS' => 'A', 'ROW_SELECTED' => TRUE),
-							array('TITLE' => 'ACTUALIZAR', 'ICON' => '<i class="fa-solid fa-rotate fa-lg"></i>', 'FN' => NULL, 'CLICK' => 'TableRefresh(\'FICHA\')', 'PERMISOS' => 'C', 'ROW_SELECTED' => FALSE),
-						); 
-						$SUBTABLE_FICHA['SETTING'] 			= array('ORDENAR' => "FALSE", 'ORDENAR_COL' => 1,'ORDENAR_METHOD' => 'DESC', 'DOBLE_CLICK' => 'Display_A_Turnos_Borrar');
-						$TMP['BODY'] .= CreateMainTable('FICHA','Ficha', $SUBTABLE_FICHA, TRUE);
-					$TMP['BODY'] .= '</div>';
-				$TMP['BODY'] .= '</div>';
+			$TMP['BODY'] .= '<div class="col-4">';
+				$TMP['BODY'] .= CreateFormInput(array('ID' => 'valor_pactado', 	'TIPO' => 'number',	'VALIDATE' => 'CEI','REQUIRED' => TRUE,	'LABEL' => '$ Pactado',	'DECIMAL' => FALSE, 'MIN' => 0, 'READONLY' => TRUE));
 			$TMP['BODY'] .= '</div>';
+			$TMP['BODY'] .= '<div class="col-4">';
+				$TMP['BODY'] .= CreateFormInput(array('ID' => 'valor_cobrado', 	'TIPO' => 'number',	'VALIDATE' => 'CEI','REQUIRED' => TRUE,	'LABEL' => '$ Recibido','DECIMAL' => FALSE, 'MIN' => 0, 'READONLY' => TRUE));
+			$TMP['BODY'] .= '</div>';
+			$TMP['BODY'] .= '<div class="col-12">';
+				$TMP['BODY'] .= CreateFormInput(array('ID' => 'observaciones', 'TIPO' => 'textarea','VALIDATE' => 'CtU', 'HEIGTH' => '500' ,'READONLY' => TRUE));
+			$TMP['BODY'] .= '</div>';	
 		$TMP['BODY'] .= '</div>';
-	$TMP['BODY'] .= '</div>';
+	$TMP['BODY'] .= '</form>';
 	
 	array_push($MODALS,CreateModal($TMP['MODAL'], $TMP['BODY'], $TMP['FOOTER']));
 	array_push($VARS,"const MODAL_".$TMP['MODAL']['ID']."_INSTANCE = bootstrap.Modal.getOrCreateInstance('#MODAL_".$TMP['MODAL']['ID']."');");
 	array_push($VARS,"const MODAL_".$TMP['MODAL']['ID']." = document.getElementById('MODAL_".$TMP['MODAL']['ID']."');");	
 	unset($JS_TMP);
 	
-	$JS_TMP = 'async function Display_A_Ver(){';
-		$JS_TMP .= 'if($("#Table_A_row").val() < 1){return;}';
-		$JS_TMP .= '$("#MODAL_FICHA #Table_FICHA_advanced").val($("#Table_A_row").val());';
-		$JS_TMP .= '$("#MODAL_FICHA #TITLE_FICHA").html("Afiliado: "+$("#Row_A_" + $("#Table_A_row").val()).find("td").eq(0).html());';
-		$JS_TMP .= 'await TableLoad("FICHA");';
-		$JS_TMP .= 'MODAL_FICHA_INSTANCE.show();';
+	$JS_TMP = 'async function Display_Ver_Turno(){';
+		$JS_TMP .= 'FormErrorReset("TURNO_FORM");';
+		$JS_TMP .= 'FormReset("TURNO_FORM");';
+		$JS_TMP .= 'let paciente = $("#Row_A_" + $("#Table_A_row").val()).find("td").eq(0).html();';
+		$JS_TMP .= 'let horario = $("#Row_FICHA_" + $("#Table_FICHA_row").val()).find("td").eq(1).html();';
+		$JS_TMP .= '$("#TITLE_TURNO").text(paciente + " - " + horario);';
+		$JS_TMP .= '$("#MODAL_TURNO .FormBtnSubmit").prop("disabled", true);';
+		$JS_TMP .= 'if($("#Table_FICHA_row").val() < 1){ return ;}';
+		$JS_TMP .= 'const response = await $.ajax({ url: "'.$LINK_BACK.'/Ver_Estado_Turno/", data: JSON.stringify({"CEI_ID_TURNO":$("#Table_FICHA_row").val()})});';
+		$JS_TMP .= '$("#TURNO_FORM #ID_PACIENTE").val(response.ID_PACIENTE);';
+		$JS_TMP .= '$("#TURNO_FORM #ASISTENCIA").val(response.ESTADO);';
+		$JS_TMP .= '$("#TURNO_FORM #VALOR_PACTADO").val(response.VALOR_SESION);';
+		$JS_TMP .= '$("#TURNO_FORM #VALOR_COBRADO").val(response.VALOR_PAGADO);';
+		$JS_TMP .= '$("#TURNO_FORM #OBSERVACIONES").val(response.OBSERVACIONES);';
+		$JS_TMP .= 'MODAL_TURNO_INSTANCE.show();';
 	$JS_TMP .= '}';
+
 	array_push($FUNCTIONS,$JS_TMP);
 }
- */
+
+
 if(in_array('Display_A_Turnos', $TABLE_FUNCTION)){
 	unset($TMP);
 	$TMP['MODAL']['ID']			= 'TURNOS';
