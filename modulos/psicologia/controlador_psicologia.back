@@ -1,5 +1,4 @@
 <?php 
-
 $PALETA_COLORES['ERROR'] 		= '#B39DDB'; //violeta
 $PALETA_COLORES['PASADO'] 		= '#A6A6A6'; // gris
 $PALETA_COLORES['HOY'] 			= '#FFD93D'; // Amarillo
@@ -64,7 +63,7 @@ function RegistrarAuditoria($tabla, $registro_id, $accion, $estado_anterior, $es
     }
     $estado_anterior_sql = $estado_anterior ? QueryValue(json_encode($estado_anterior)) : "NULL";
     $estado_nuevo_sql = $estado_nuevo ? QueryValue(json_encode($estado_nuevo)) : "NULL";
-    QueryInsert("INSERT INTO ".$DBT['AUDITORIA']." (`tabla_afectada`, `registro_id`, `accion`, `estado_anterior`, `estado_nuevo`, `usuario_id`, `fecha`) VALUES ('".$tabla."', '".$registro_id."', '".$accion."', ".$estado_anterior_sql.", ".$estado_nuevo_sql.", '".$C_USER['ID']."', NOW())");
+    QueryInsert("INSERT INTO ".$DBT['AUDITORIA']." (`tabla_afectada`, `registro_id`, `accion`, `estado_anterior`, `estado_nuevo`, `reg_user`, `reg_fecha`) VALUES ('".$tabla."', '".$registro_id."', '".$accion."', ".$estado_anterior_sql.", ".$estado_nuevo_sql.", '".$C_USER['ID']."', NOW())");
 }
 
 
@@ -347,9 +346,7 @@ elseif($ROUTE_OPC == 'Procesar_Cobro'){
 	if(QueryNumRows($Que) < 1){RJRE("El turno no se pudo identificar.");}
 	while($Row = QueryFetch($Que)){
 		$ESTADO_NUEVO = array(
-			'valor_pagado' 	=> $sJ['CEI_VALOR_COBRADO'],
-			'reg_user' 		=> $C_USER['ID'],
-			'reg_fecha' 	=> date("Y-m-d H:i:s")
+			'valor_pagado' 	=> $sJ['CEI_VALOR_COBRADO']
 		);
 		if($Row['estado'] == '0'){ RJRE("El turno se encuentra anulado.");}
 		if($Row['id_paciente'] != $sJ['CEI_ID_PACIENTE']){RJRE("Ocurrio un error al vincular al paciente.");}
@@ -362,9 +359,7 @@ elseif($ROUTE_OPC == 'Procesar_Cobro'){
 		}
 		else{
 			$ESTADO_ANTERIOR = array(
-				'valor_pagado' 	=> $Row['valor_pagado'],
-				'reg_user' 		=> $Row['reg_user'],
-				'reg_fecha' 	=> $Row['reg_fecha']
+				'valor_pagado' 	=> $Row['valor_pagado']
 			);
 			$ACCION = "Modifica cobro";
 			QueryUpdate("UPDATE ".$DBT['PAGOS']." SET `valor_pagado` = '".$sJ['CEI_VALOR_COBRADO']."', `reg_user` = '".$C_USER['ID']."', `reg_fecha`= NOW() WHERE `id_turno` = '".$sJ['CEI_ID_TURNO']."'");
