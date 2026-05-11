@@ -1,0 +1,60 @@
+<?php
+$FILE_JS = 'default_v3';
+$TABS['A'] =  array('ICON' => '<i class="fa-regular fa-address-book"></i>', 'TITLE' => 'Pacientes');
+
+$TABLE['A']['COLUMNAS']			= array(
+	array('COLUMNA' => 'Turno [ID]', 'DB' => 'TURNO'),
+	array('COLUMNA' => 'Fecha'),
+	array('COLUMNA' => 'Horario'),
+	array('COLUMNA' => 'Estado')
+);
+$TABLE['A']['AJAX_URL'] 		= $LINK_BACK.'/Listado_Turnos';
+$TABLE['A']['HERRAMIENTAS_NEW'] = array(
+	array('TITLE' => 'BUSCAR', 			'ICON' => '<i class="fa-brands fa-searchengin fa-lg"></i>', 'FN' => 'Display_Search', 	'CLICK' => 'Display_Search()','PERMISOS' => 'C','ROW_SELECTED' => FALSE),
+	array('TITLE' => 'ACTUALIZAR', 		'ICON' => '<i class="fa-solid fa-rotate fa-lg"></i>', 		'FN' => NULL, 					'CLICK' => 'TableRefresh(\'A\')', 	'PERMISOS' => 'C', 'ROW_SELECTED' => FALSE),
+);
+$TABLE['A']['SETTING'] 			= array('ORDENAR' => "TRUE", 'ORDENAR_COL' => 1,'ORDENAR_METHOD' => 'ASC', 'DOBLE_CLICK' => 'Display_Ver_Paciente');
+$TABLE['A']['QUICK_SEARCH']		= "Buscar Apellido y Nombre o DNI";
+
+$MAIN = CreateMain($TABS, $TABLE);
+
+if(in_array('Display_Search', $TABLE_FUNCTION)){
+	unset($TMP);
+	$TMP['MODAL']['ID']			= 'BUSCADOR';
+	$TMP['MODAL']['TITLE']		= 'Buscador';
+	$TMP['MODAL']['SIZE']		= '';
+	
+	$TMP['FOOTER']['SUBMIT'] 	= array('ID' => 'Guardar');
+	$TMP['FOOTER']['CLOSE']		= array('ID' => 'Cerrar');
+	
+	$TMP['BODY'] = '<input type="hidden" id="AUTOFOCUS">';
+	$TMP['BODY'] .= '<form id="'.$TMP['MODAL']['ID'].'_FORM" autocomplete="off">';
+		$TMP['BODY'] .= CreateFormInput(array('ID' => 'id_paciente','TIPO' => 'select2','VALIDATE' => 'CEI','REQUIRED' => TRUE, 'LOWERCASE' => TRUE));
+	$TMP['BODY'] .= '</form>';
+	
+	array_push($MODALS,CreateModal($TMP['MODAL'], $TMP['BODY'], $TMP['FOOTER']));
+	array_push($VARS,"const MODAL_".$TMP['MODAL']['ID']."_INSTANCE = bootstrap.Modal.getOrCreateInstance('#MODAL_".$TMP['MODAL']['ID']."');");
+	array_push($VARS,"const MODAL_".$TMP['MODAL']['ID']." = document.getElementById('MODAL_".$TMP['MODAL']['ID']."');");	
+	unset($JS_TMP);
+	
+	$JS_TMP = 'async function Display_Search(){';
+		$JS_TMP .= 'FormErrorReset("BUSCADOR_FORM");';
+		$JS_TMP .= 'FormReset("BUSCADOR_FORM");';	
+		$JS_TMP .= 'inicializarSelect2("#ID_PACIENTE", "#MODAL_BUSCADOR", "'.$LINK_BACK.'/DL_Pacientes", "Pacientes", 2);';
+		$JS_TMP .= 'MODAL_BUSCADOR_INSTANCE.show();';
+	$JS_TMP .= '}';
+	
+	$JS_TMP .= 'async function MODAL_BUSCADOR_Procesar(){';
+		$JS_TMP .= 'if($("#BUSCADOR_FORM")[0].reportValidity()==false){return;}';
+		$JS_TMP .= '$("#Table_A_search").val($("#ID_PACIENTE").val());';
+		$JS_TMP .= 'await TableLoad("A");';
+		$JS_TMP .= 'MODAL_BUSCADOR_INSTANCE.hide();';
+	$JS_TMP .= '}';
+	array_push($FUNCTIONS,$JS_TMP);
+}
+
+$JS_TMP = '$(document).ready(function(){';
+	$JS_TMP .= 'if($("#Table_A_search").val() == ""){Display_Search();}';
+$JS_TMP .= '});';
+array_push($FUNCTIONS,$JS_TMP);
+?>

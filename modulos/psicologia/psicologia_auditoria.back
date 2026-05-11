@@ -1,0 +1,1498 @@
+<?php 
+$PALETA_COLORES['ERROR'] 		= '#B39DDB';
+$PALETA_COLORES['PASADO'] 		= '#A6A6A6';
+$PALETA_COLORES['HOY'] 			= '#FFD93D';
+$PALETA_COLORES['DISPONIBLES'] 	= '#48C774';
+$PALETA_COLORES['COMPLETOS'] 	= '#FFD93D';//2E7D32
+
+function generarSemanas($fechaInicio, $click = false) {
+    $fecha = new DateTime($fechaInicio);
+    $diasEnMes = $fecha->format('t');
+    $mes = $fecha->format('m');
+    $anio = $fecha->format('Y');
+    $semanas = [];
+    $semanaActual = 1;    
+    for ($dia = 1; $dia <= $diasEnMes; $dia++) {
+        $fecha->setDate($anio, $mes, $dia);
+        $diaSemana = (int) $fecha->format('N');        
+        if ($diaSemana >= 1 && $diaSemana <= 5) {
+			if($click == true){$CLICK = $fecha->format('Y-m-d');}else{ $CLICK = '';}
+            $semanas[$semanaActual][$diaSemana]['FECHA'] = (string)$dia;
+            $semanas[$semanaActual][$diaSemana]['COLOR'] = '';
+            $semanas[$semanaActual][$diaSemana]['TITLE'] = '';
+            $semanas[$semanaActual][$diaSemana]['CLICK'] = $CLICK;
+        }        
+        if ($diaSemana == 5) {
+            $semanaActual++;
+        }
+    }    
+    return $semanas;
+}
+function Update_Fecha(&$calendario, $dia, $color, $title, $fecha) {
+    foreach ($calendario as $semana => &$dias) {
+        foreach ($dias as $diaSemana => &$datos) {
+            if (isset($datos['FECHA']) && $datos['FECHA'] == $dia) {
+                $datos['COLOR'] = $color;
+                $datos['TITLE'] = $title;
+                $datos['CLICK'] = $fecha;
+                return true;
+            }
+        }
+    }
+    return false;
+}
+function Estados($ESTADO, $ICON = TRUE){
+	$RETURN = '';
+	if($ESTADO == 0){ 		$RETURN = $ICON ? '<i class="fa-solid fa-user-xmark fa-lg" style="color:red" 		title="ANULADO"></i>' 	: 'Anulado'; }
+	elseif($ESTADO == 1){	$RETURN = $ICON ? '<i class="fa-solid fa-user-minus fa-lg" style="color:grey"		title="RESERVADO"></i>' : 'Reservado'; }
+	elseif($ESTADO == 10){ 	$RETURN = $ICON ? '<i class="fa-solid fa-user-xmark fa-lg" style="color:purple"		title="AUSENTE"></i>' 	: 'Ausente'; }
+	elseif($ESTADO == 11){ 	$RETURN = $ICON ? '<i class="fa-solid fa-user-check fa-lg" style="color:green"		title="PRESENTE"></i>' 	: 'Presente'; }
+	return $RETURN;
+}
+function Pago($PAGO, $ICON = TRUE){
+	$RETURN = '';
+	if($PAGO == 0 || $PAGO == null || $PAGO == ''){ $RETURN = $ICON ? '<i class="fa-solid fa-dollar fa-lg" style="color:red" title="'.$PAGO.'"></i>' : '0'; }
+	else{$RETURN = $ICON ? '<i class="fa-solid fa-dollar fa-lg" style="color:green" title="'.$PAGO.'"></i>' : $PAGO ; }
+	return $RETURN;
+}
+
+if($ROUTE_OPC == 'DL_Pacientes'){
+	$RETURN['items'] =array();
+	if($PP['C'] != 1){EJE($RETURN);}	
+	$SEARCH = " WHERE `estado` = '1'";
+	if(CIJE('CTS_SEARCH') !== TRUE){
+		$terminos = explode(' ', $sJ['CTS_SEARCH']);
+		$condiciones_busqueda = [];
+		foreach ($terminos as $termino) {
+			$t = trim($termino); 
+			if (!empty($t)) {
+				$condiciones_busqueda[] = "(`dni` LIKE '%".$t."%' OR `apellido` LIKE '%".$t."%' OR `nombre` LIKE '%".$t."%' OR `telefono` LIKE '%".$t."%')";
+			}
+		}
+		if(count($condiciones_busqueda) > 0) { $SEARCH .= " AND (" . implode(" AND ", $condiciones_busqueda) . ")";}
+	} 
+	$Que = QuerySelect("SELECT `id_paciente`,  CONCAT( `apellido`, ', ', `nombre`) AS 'paciente' FROM ".$DBT['PACIENTES'].$SEARCH." ORDER BY `paciente`");
+	while($Row = QueryFetch($Que)){
+		$TMP = [];
+		$TMP['ID']		= $Row['id_paciente'];
+		$TMP['VALUE']	= $Row['paciente'];
+		array_push($RETURN['items'], $TMP);
+	}
+	EJE($RETURN);
+	
+	
+	
+	
+	
+	
+	$SEARCH = " WHERE C.`disponible`='1' AND A.`disponible`='1' AND C.`id_categoria` IN (".implode(",", $PERMISOS_C).")";
+	if(CIJE('CTS_SEARCH') !== TRUE){ $SEARCH .= " AND C.`categoria` LIKE '%".$sJ['CTS_SEARCH']."%'";};
+	$SEARCH .= " GROUP BY C.`id_categoria`";
+	$Que = QuerySelect("SELECT C.`id_categoria`,C.`categoria` FROM ".$DBT['TURNERAS_PARAM_CATEGORIAS']." C JOIN ".$DBT['TURNERAS_AGENDAS']." A ON A.`id_categoria`=C.`id_categoria`".$SEARCH." ORDER BY `categoria` ASC", "QWE_PORTAL");
+	while($Row = QueryFetch($Que)){
+		$TMP = [];
+		$TMP['ID']		= $Row['id_categoria'];
+		$TMP['VALUE']	= $Row['categoria'];
+		array_push($RETURN['items'], $TMP);
+	}
+	EJE($RETURN);
+}
+elseif($ROUTE_OPC == 'Listado_Turnos'){
+	$RETURN['COUNT'] = 0;
+	$RETURN['TOTAL'] = 0;
+	$RETURN['PAGINAS'] = 1;
+	$RETURN['ROWS'] = [];
+	if($PP['C'] != 1){EJE($RETURN);}
+	
+	$ARRAY_ORDER = array(1 => '`id_turno` {METHOD}', 2 => '`fecha` {METHOD}', 3 => '`horario` {METHOD}');
+	$FORM = LISTADO_QUERY($ARRAY_ORDER);
+	if($FORM['SEARCH'] == NULL){EJE($RETURN);}
+	$SEARCH = "WHERE `id_paciente` = '".$FORM['SEARCH']."'"; 
+	
+	$Que = QuerySelect("SELECT `id_turno`, `fecha`, `horario_inicio`, `horario_fin`, `estado`  FROM ".$DBT['TURNOS'].$SEARCH." ORDER BY ".$FORM['ORDENAR']." LIMIT ".$FORM['LIMIT']." ,".$FORM['ROWS']);
+	while($Row = QueryFetch($Que)){
+		$RETURN['COUNT']++;
+		$TMP = [];
+		$TMP['ID'] 						= $Row['id_turno'];
+		$TMP['DATA']['TURNO'] 			= $Row['id_turno'];
+		$TMP['DATA']['FECHA'] 			= $Row['fecha'];
+		$TMP['DATA']['HORARIO'] 		=  Hora_Formato($Row['horario_inicio'])." - ".Hora_Formato($Row['horario_fin']);
+		$TMP['DATA']['ESTADO'] 			= $Row['estado'];
+		
+		array_push($RETURN['ROWS'], $TMP);
+		unset($TMP);
+	}
+	$Que = QuerySelect("SELECT COUNT(*) AS 'total' FROM ".$DBT['PACIENTES'].$SEARCH);
+	while($Row = QueryFetch($Que)){	
+		$RETURN['TOTAL'] = $Row['total'];
+		$RETURN['PAGINAS'] = ceil($RETURN['TOTAL']/$FORM['ROWS']);
+	}
+	EJE($RETURN);	
+}
+
+elseif($ROUTE_OPC == 'Procesar_Paciente'){
+	if($PP['A'] == 0){RJRE("Permiso denegado");}
+	
+	if(CIJE('CEI_ID_PACIENTE') === TRUE){RJRE("No se pudo procesar el identificador del paciente.");}
+	if(CIJE('CEI_DNI') === TRUE){RJRE("No se pudo procesar el DNI.");}
+	if(CIJE('CtS_NOMBRE') === TRUE){RJRE("No se pudo procesar el nombre ingresado.");} else{$sJ['CtS_NOMBRE'] = mb_convert_case($sJ['CtS_NOMBRE'], MB_CASE_TITLE, "UTF-8");} ;
+	if(CIJE('CtS_APELLIDO') === TRUE){RJRE("No se pudo procesar el apellido ingresado.");} else{$sJ['CtS_APELLIDO'] = mb_convert_case($sJ['CtS_APELLIDO'], MB_CASE_TITLE, "UTF-8");} ;
+	if(CIJE('CtS_TELEFONO') === TRUE){RJRE("No se pudo procesar el telefono.");}
+	if(strlen($sJ['CtS_TELEFONO']) > 20){ RJRE("El numero de telefono supera los caracteres máximos."); }
+	if($sJ['CtS_DIRECCION'] != ''){if(CIJE('CtS_DIRECCION') === TRUE){RJRE("No se pudo procesar la dirección.");}$sJ['CtS_DIRECCION'] = mb_convert_case($sJ['CtS_DIRECCION'], MB_CASE_TITLE, "UTF-8");}
+	if($sJ['CtS_LOCALIDAD'] != ''){if(CIJE('CtS_LOCALIDAD') === TRUE){RJRE("No se pudo procesar la localidad.");}$sJ['CtS_LOCALIDAD'] = mb_convert_case($sJ['CtS_LOCALIDAD'], MB_CASE_TITLE, "UTF-8");}
+	if($sJ['CIC_CORREO'] != ''){if(CIJE('CIC_CORREO') === TRUE)	{RJRE("No se pudo procesar la dirección.");}}
+	if($sJ['CFA_FECHA'] > date("Y-m-d")){ RJRE("Fecha Invalida"); }
+	if($sJ['CFA_FECHA'] != ''){if(CIJE('CFA_FECHA') === TRUE){RJRE("No se pudo procesar la dirección.");}}else{ $sJ['CFA_FECHA'] = 'NULL'; }
+	
+	if($sJ['CEI_ID_PACIENTE'] == '0'){
+		$QuePaciente = QuerySelect("SELECT `id_paciente`, CONCAT(`apellido`, ', ', `nombre`) AS 'paciente', `dni` FROM ".$DBT['PACIENTES']." WHERE `dni` = '".$sJ['CEI_DNI']."' OR (`apellido` = '".$sJ['CtS_APELLIDO']."' AND `nombre` = '".$sJ['CtS_NOMBRE']."') AND `estado` != '0'");
+		if(QueryNumRows($QuePaciente) >= 1){ 
+			while($RowPaciente = QueryFetch($QuePaciente)){
+				if($RowPaciente['dni'] == $sJ['CEI_DNI']){ RJRE("Ya existe un paciente con el DNI ingresado."); }
+				else{RJRE("Ya existe el paciente ".$RowPaciente['paciente'].".");}
+			}
+		}
+		QueryInsert("INSERT INTO ".$DBT['PACIENTES']."(`dni`, `nombre`, `apellido`, `telefono`, `correo`, `fecha_nacimiento`, `direccion`, `localidad`, `reg_user`, `reg_fecha`) VALUES ('".$sJ['CEI_DNI']."', '".$sJ['CtS_NOMBRE']."', '".$sJ['CtS_APELLIDO']."', '".$sJ['CtS_TELEFONO']."', '".$sJ['CIC_CORREO']."', '".$sJ['CFA_FECHA']."', '".$sJ['CtS_DIRECCION']."', '".$sJ['CtS_LOCALIDAD']."', '".$C_USER['ID']."',NOW())");
+		$MSJ = "Se agrego al sistema a ".$sJ['CtS_APELLIDO'].", ".$sJ['CtS_NOMBRE'] ;
+	}
+	else{
+		$QuePaciente = QuerySelect("SELECT `id_paciente`, CONCAT(`apellido`, ', ', `nombre`) AS 'paciente', `dni` FROM ".$DBT['PACIENTES']." WHERE `id_paciente` = '".$sJ['CEI_ID_PACIENTE']."' OR `dni` = '".$sJ['CEI_DNI']."' OR (`apellido` = '".$sJ['CtS_APELLIDO']."' AND `nombre` = '".$sJ['CtS_NOMBRE']."') AND `estado` != '0'");
+		// $QuePaciente = QuerySelect("SELECT `id_paciente` FROM ".$DBT['PACIENTES']." WHERE `id_paciente` = '".$sJ['ID_PACIENTE']."' AND `estado` != '0'");
+		if(QueryNumRows($QuePaciente) < 1){ RJRE("Ocurrió un error al buscar el paciente."); }
+		while($RowPaciente = QueryFetch($QuePaciente)){
+			if($RowPaciente['id_paciente'] != $sJ['CEI_ID_PACIENTE']){
+				if($RowPaciente['dni'] == $sJ['CEI_DNI']){ RJRE("Ya existe un paciente con el DNI ingresado."); }
+				else{RJRE("Ya existe el paciente ".$RowPaciente['paciente'].".");}
+			}
+		}
+		QueryUpdate("UPDATE ".$DBT['PACIENTES']." SET `dni` = '".$sJ['CEI_DNI']."', `nombre` = '".$sJ['CtS_NOMBRE']."',`apellido` = '".$sJ['CtS_APELLIDO']."', `telefono` = '".$sJ['CtS_TELEFONO']."', `correo` = '".$sJ['CIC_CORREO']."', `fecha_nacimiento` = '".$sJ['CFA_FECHA']."', `direccion` = '".$sJ['CtS_DIRECCION']."', `localidad` = '".$sJ['CtS_LOCALIDAD']."' WHERE `estado` != '0' AND `id_paciente` = '".$sJ['CEI_ID_PACIENTE']."'");
+		$MSJ = "Se modifico la información de ".$sJ['CtS_APELLIDO'].", ".$sJ['CtS_NOMBRE'] ;
+	} 
+	RJRO($MSJ);
+}
+elseif($ROUTE_OPC == 'Ver_Paciente'){
+	$RETURN['ID_PACIENTE'] = 0;
+	if($PP['C'] != 1){EJE($RETURN);}
+	if(CIJE('CEI_ID') === TRUE){EJE($RETURN);};
+	$Que = QuerySelect("SELECT `id_paciente`, `dni`, `nombre`, `apellido`, `telefono`, `correo`, `fecha_nacimiento`, `direccion`, `localidad` FROM ".$DBT['PACIENTES']." WHERE `estado` != '0' AND `id_paciente` = '".$sJ['CEI_ID']."'");
+	if(QueryNumRows($Que) > 0){
+		while($Row = QueryFetch($Que)){
+			$RETURN['ID_PACIENTE'] 	= $Row['id_paciente'];
+			$RETURN['DNI'] 			= $Row['dni'];
+			$RETURN['NOMBRE'] 		= $Row['nombre'];
+			$RETURN['APELLIDO'] 	= $Row['apellido'];
+			$RETURN['TELEFONO'] 	= $Row['telefono'];
+			$RETURN['CORREO'] 		= $Row['correo'];
+			$RETURN['FECHA'] 		= fecha_formato($Row['fecha_nacimiento']);
+			$RETURN['DIRECCION'] 	= $Row['direccion'];
+			$RETURN['LOCALIDAD'] 	= $Row['localidad'];
+		}
+	}
+	EJE($RETURN);
+}
+elseif($ROUTE_OPC == 'Listado_Turnos_Paciente'){ //REVISAR AL COMPLETAR TODO
+	$RETURN['COUNT'] = 0;
+	$RETURN['TOTAL'] = 0;
+	$RETURN['PAGINAS'] = 1;
+	$RETURN['ROWS'] = [];
+	if($PP['C'] != 1 || CIJE('CtU_ADVANCE')){EJE($RETURN);}
+	$ARRAY_ORDER = array(1 => 'T.`fecha` DESC, T.`horario_inicio` DESC');
+	$FORM = LISTADO_QUERY($ARRAY_ORDER);
+	$SEARCH = " WHERE T.`id_paciente`='".$sJ['CtU_ADVANCE']."'";
+
+	$Que = QuerySelect("SELECT T.`id_turno`, T.`fecha`, T.`horario_inicio`, T.`horario_fin`, T.`estado`, P.`valor_pagado` FROM ".$DBT['TURNOS']." T LEFT JOIN ".$DBT['PAGOS']." P ON P.`id_turno` = T.`id_turno` " .$SEARCH." ORDER BY ".$FORM['ORDENAR']." LIMIT ".$FORM['LIMIT']." ,".$FORM['ROWS']);
+	while($Row = QueryFetch($Que)){
+		$RETURN['COUNT']++;
+		$TMP = [];
+		$TMP['ID'] 						= $Row['id_turno'];
+		$TMP['DATA']['FECHA'] 			= Fecha_Formato($Row['fecha']);
+		$TMP['DATA']['HORARIO']	 		= Hora_Formato($Row['horario_inicio'])." - ".Hora_Formato($Row['horario_fin']);
+		$TMP['DATA']['ESTADO'] 			= Estados($Row['estado'])." ".Pago($Row['valor_pagado']);
+		array_push($RETURN['ROWS'], $TMP);
+		unset($TMP);
+	}
+	$Que = QuerySelect("SELECT COUNT(*) AS 'total' FROM ".$DBT['TURNOS']." T LEFT JOIN ".$DBT['PAGOS']." P ON P.`id_turno` = T.`id_turno` " .$SEARCH." ORDER BY ".$FORM['ORDENAR']." LIMIT ".$FORM['LIMIT']." ,".$FORM['ROWS']);
+	while($Row = QueryFetch($Que)){	
+		$RETURN['TOTAL'] = $Row['total'];
+		$RETURN['PAGINAS'] = ceil($RETURN['TOTAL']/$FORM['ROWS']);
+	}
+	EJE($RETURN);
+}
+elseif($ROUTE_OPC == 'Ver_Estado_Turno'){
+	$RETURN['ID_PACIENTE'] = 0;
+	if($PP['C'] != 1){EJE($RETURN);}
+	if(CIJE('CEI_ID_TURNO') === TRUE){EJE($RETURN);};
+	
+	$Que = QuerySelect("SELECT T.`id_paciente`, T.`estado`, T.`valor_sesion`, P.`valor_pagado`, T.`observaciones` FROM ".$DBT['TURNOS']." T LEFT JOIN ".$DBT['PAGOS']." P ON P.`id_turno` = T.`id_turno` WHERE T.`id_turno` = '".$sJ['CEI_ID_TURNO']."'");
+	if(QueryNumRows($Que) > 0){
+		while($Row = QueryFetch($Que)){
+			$RETURN['ID_PACIENTE'] 		= $Row['id_paciente'];
+			$RETURN['ESTADO'] 			= Estados($Row['estado'], FALSE);
+			$RETURN['VALOR_SESION'] 	= $Row['valor_sesion'];
+			$RETURN['VALOR_PAGADO'] 	= Pago($Row['valor_pagado'],FALSE);
+			$RETURN['OBSERVACIONES'] 	= $Row['observaciones'];
+		}
+	}
+	EJE($RETURN);	
+}
+else{
+	EE("NO_SE_PUEDE_PROCESAR_LA_SOLICITUD");
+}
+
+
+
+// CODIGO DAS 
+
+// require_once './db_connect_portal.sys';
+use Dompdf\Dompdf;
+use Dompdf\Options;
+
+$CANCELAR_TURNO = 1; // HORAS DE ANTELACION PARA CANCELAR UN TURNO // DUPLICADO EN PORTAL
+
+function create_pdf($TURNOS){
+	/*= [NOMBRE] => TURNOS
+		[CATEGORIA] => ODONTOLOGIA
+		[PROFESIONAL] => PROFESIONAL 1
+		//[AGENDA] => ODONTOLOGIA - PROFESIONAL 1
+		[FECHA] => 08-08-2025
+		[ROWS] => [0] => 
+					[ST] => 
+					[AFILIADO] => FIGUEIRA ALEXIS DAMIAN
+					[DNI] => 39490719
+					[NRO_OMINT] => 4929658500018
+					[NRO_AFI] => 47257/1
+					[HORA] => 10:00
+	*/
+	$TURNOS['AGENDA'] = $TURNOS['CATEGORIA']." - ".$TURNOS['PROFESIONAL'];
+	$NORMAS_ISO = "DAS.CALIDAS.RE31-REV00";
+	$MT = "100";
+	$MTH = "60";
+	$MB = "50";
+	$MBH = "30";
+	$formatterES = new NumberFormatter("es", NumberFormatter::SPELLOUT);
+	$MAX_ROWS = 27;
+	
+	$STYLE = '<style>';
+		$STYLE .= 	'body		{ size: A4;font-size: 12px;color: #333;font-family: "Roboto Condensed", sans-serif ; }'; /*  border: 1px solid red; */
+		$STYLE .= 	'@page		{ size: A4 ; margin: '.($MT+30).'px 25px 30px 25px!important}';
+		$STYLE .= 	'@page 		{ @bottom-center { content: element(footer); }}';
+		$STYLE .= 	'.header 	{ position:fixed; top:-'.($MT+10).'px; left:0; right:0; width:100%; }';/* border: 1px solid green; */
+		$STYLE .= 	'#footer 	{ width: 100%; text-align: center; font-size: 12px; height: 50px; margin: 30px 0px 0px 0px; }';
+		$STYLE .= 	'.cabecera	{ background: #ececec;overflow: hidden;height: '.$MTH.'px; padding: 15px; border-radius: 5px; }'; /* border: 1px solid green; */
+		$STYLE .= 	'.normas	{ position:absolute; top:20px; left:14px; width:170px; height:22px; line-height:20px; font-weight:700; border-radius:5px; text-align:center;}';
+		$STYLE .= 	'.fecha		{ position:absolute; top:20px; right:14px; width:99px; height:22px; line-height:20px; font-weight:700; background:#bdbdbd; color:#333; border-radius:5px; text-align:center;}';
+		$STYLE .= 	'.leyenda	{ margin-top: 8px; font-size: 10px; font-style: italic; color: #333 }';
+		$STYLE .=  	'.label 	{ background: #bdbdbd; margin-top: 10px; font-weight: 700; border-radius: 5px; display: inline-block; padding: 5px 10px; text-align: center; line-height: 1.2; }';
+		$STYLE .=  	'.label div { margin: 2px 0; white-space: nowrap; }';
+		$STYLE .= 	'table 		{ width: 100%; font-size: 12px; border-collapse: collapse; }';
+		$STYLE .= 	'td 		{ height: 35px; }';
+		$STYLE .= 	'.pagina	{ position: absolute; bottom: +'.($MB-30).'px; left:0; right:0; width:100%; height: '.$MBH.'px;}';
+	$STYLE .= '</style>';
+	
+	$HEADER = '<div class="header">';
+		$HEADER .= '<div class="cabecera" align="center">';
+			$HEADER .= '<div class="label" align="left">';
+				$HEADER .= '<div>'.$TURNOS['AGENDA']." - ".$TURNOS['FECHA'].'</div>';
+			$HEADER .= '</div>'; 
+		$HEADER .= '</div>';
+	$HEADER .= '</div>';
+	$pages = array_chunk($TURNOS['ROWS'], $MAX_ROWS);
+	$BODY = '';
+		$BODY .= '<div class="divbody">';
+			$BODY .= '<table style="color:#333; border-collapse: collapse;" border=1 width="100%">';
+				$BODY .= '<thead>';
+					$BODY .= '<tr>';
+						$BODY .= '<th style="border: 1px solid #bdbdbd;border-collapse: collapse; width: 30%;" >AFLILIADO</th>';
+						$BODY .= '<th style="border: 1px solid #bdbdbd;border-collapse: collapse; width: 15%;" >DNI</th>';
+						$BODY .= '<th style="border: 1px solid #bdbdbd;border-collapse: collapse; width: 20%;" >NRO OMINT</th>';
+						$BODY .= '<th style="border: 1px solid #bdbdbd;border-collapse: collapse; width: 15%;" >HORA</th>';
+						$BODY .= '<th style="border: 1px solid #bdbdbd;border-collapse: collapse; width: 20%;" >FIRMA</th>';
+					$BODY .= '</tr>';
+				$BODY .= '</thead>'; 
+				foreach ($pages as $pageIndex => $rows){
+				$BODY .= '<tbody>';
+					foreach($rows as $K ){
+						$BODY .= '<tr>';
+							$BODY .= '<td style="border: 1px solid #bdbdbd;border-collapse: collapse; text-align: center;">'.$K['AFILIADO'].'</td>';
+							$BODY .= '<td style="border: 1px solid #bdbdbd;border-collapse: collapse; text-align: center;">'.$K['DNI'].'</td>';
+							$BODY .= '<td style="border: 1px solid #bdbdbd;border-collapse: collapse; text-align: center;">'.$K['NRO_OMINT'].'</td>';
+							$BODY .= '<td style="border: 1px solid #bdbdbd;border-collapse: collapse; text-align: center;">'.$K['HORA'].$K['ST'].'</td>';
+							$BODY .= '<td style="border: 1px solid #bdbdbd;border-collapse: collapse; text-align: center;"></td>';
+						$BODY .= '</tr>';
+					}
+				$BODY .= '</tbody>';
+				}
+			$BODY .= '</table><br/>';
+		$BODY .= '</div>';
+
+	$PDF = $STYLE.$HEADER.$BODY;
+	$dompdf = new Dompdf();
+	$dompdf->set_option('isHtml5ParserEnabled', true);
+	$dompdf->set_option('isPhpEnabled', true);
+	$dompdf->loadHtml($PDF, "UTF-8");
+	$dompdf->setPaper("A4", "portrait");
+	$dompdf->set_option('defaultMediaType', 'all');
+	$dompdf->set_option('isFontSubsettingEnabled', true);
+	$dompdf->render();
+	$pdfOutput = $dompdf->output();
+	$base64PDF = base64_encode($pdfOutput);
+	return array(
+		'file_base64' => $base64PDF,
+		'filename' => $TURNOS['NOMBRE'].'.pdf'
+	);
+}
+function create_pdf_ticket($TURNO){ // TIENE CAMBIOS
+	list($dia, $mes, $año) = explode('-', $TURNO['FECHA']);
+// AGREGO FILA NRO. AFILIADO 
+// Y AGREGO LO DE LINEA XQ QUE ACEPTA TODAS LAS AGENDAS Y QUEDA RARO EL MENSAJE.
+	if($TURNO['CATEGORIA'] == 'CHEQUEO ANUAL'){
+		$LINEA_PROFESIONAL = "Establecimiento: ".$TURNO['PROFESIONAL'];
+		$LINEA_HORARIO = "Hora: ".$TURNO['HORARIO'];
+	}else{
+		$LINEA_PROFESIONAL = "Profesional Dr.: ".$TURNO['PROFESIONAL'];
+		$LINEA_HORARIO = "Consultorio Nº: ___ Hora: ".$TURNO['HORARIO'];
+	}
+	
+	$HTML = '<html>';
+		$HTML .= '<head>';
+			$HTML .= '<meta charset="UTF-8">';
+			$HTML .= '<style>';
+				$HTML .= 'body			{ font-family:monospace; font-size:14px; margin:0; padding:0; }';
+				$HTML .= '.ticket-container { width:70mm; margin:0 auto; padding:5px; }';
+				$HTML .= '.ticket		{ border:1px solid black; padding:5px; }';
+				$HTML .= '.title		{ font-weight:bold; text-align:center; margin-bottom:5px; font-size:14px; }';
+				$HTML .= '.line 		{ margin-bottom:3px; }';
+				$HTML .= '.firma 		{ margin-top:35px; border-top:1px solid black; text-align:center; font-size:11px; padding:2px 10px 0px 10px;}';
+				$HTML .= '@media print 	{ ';
+					$HTML .= '@page 		{ size:auto; margin:0; }';
+					$HTML .= 'body			{ margin:0; padding:0; }';
+				$HTML .= '}';
+			$HTML .= '</style>';
+		$HTML .= '</head>';
+		$HTML .= '<body>';
+			$HTML .= '<div class="ticket-container">';
+				$HTML .= '<div class="ticket">';
+					$HTML .= '<div class="title">DIRECCIÓN DE AYUDA SOCIAL PARA EL PERSONAL DEL CONGRESO DE LA NACIÓN</div>';
+					$HTML .= '<div class="line">TURNO '.$TURNO['CATEGORIA'].'</div>';
+					$HTML .= '<div class="line">Día: '.$dia.' Mes: '.$mes.' Año: '.$año.'</div>';
+					// $HTML .= '<div class="line">Profesional Dr.: '.$TURNO['PROFESIONAL'].'</div>';
+					// $HTML .= '<div class="line">Consultorio Nº: ___ Hora: '.$TURNO['HORARIO'].'</div>';
+					$HTML .= '<div class="line">'.$LINEA_PROFESIONAL.'</div>';
+					$HTML .= '<div class="line">'.$LINEA_HORARIO.'</div>';
+					$HTML .= '<div class="line">Paciente: '.$TURNO['AFILIADO'].'</div>';
+					$HTML .= '<div class="line">Nro. Afiliado: '.$TURNO['NRO_AFI'].'</div>';
+					$HTML .= '<div class="firma">Firma del agente interviniente</div>';
+				$HTML .= '</div>';
+			$HTML .= '</div>';
+		$HTML .= '</body>';
+	$HTML .= '</html>';
+	return $HTML;
+}
+function Estados2($ESTADO, $METODO = NULL, $MOTIVO = NULL){
+	if($METODO == 0){ $METODO = '-PORTAL';}else{ $METODO = '';}
+	if($MOTIVO != NULL) { $INFO = ' - <i class="fa-solid fa-triangle-exclamation fa-lg" style="color:Orange" title="'.$MOTIVO.'"></i>'; }else{ $INFO = ''; }
+	if($ESTADO == 0){ return 'ANULADO'.$METODO.' <i class="fa-solid fa-circle-xmark fa-lg" style="color:red"></i>'.$INFO;}
+	elseif($ESTADO == 1){ return 'RESERVADO'.$METODO.' <i class="fa-solid fa-circle fa-lg" style="color:grey"></i>'.$INFO;}
+	elseif($ESTADO == 10){ return 'AUSENTE <i class="fa-solid fa-circle-xmark fa-lg" style="color:purple"></i>'.$INFO;}
+	elseif($ESTADO == 11){ return 'PRESENTE <i class="fa-solid fa-circle-check fa-lg" style="color:green"></i>'.$INFO;}
+	else {return '';}
+}
+/* En caso de actualizacion de los template modificar portal de afiliados */ 
+function TemplateAlta($AFILIADO,$TURNO, $TURNERA, $MENSAJE){
+	$RETURN = '<div style="width:450px;border: 5px solid #27AE98; padding:20px;" align="center">';
+		$RETURN .= '<img src="data:image/png;base64,'.$GLOBALS['CFG_LOGO_DAS'].'" alt="Logo"/>';
+		$RETURN .= '<br><hr>';
+		$RETURN .= '<h2 style="color:blue;"><b>Confirmacion de Turno</b></h2>';
+		$RETURN .= '<p style="font-size:16px; text-align:justify;">Hola '.$AFILIADO.',</p>';
+		$RETURN .= '<p style="font-size:16px; text-align:justify;">';
+			$RETURN .= 'Tu turno ha sido confirmado. A continuación, te compartimos los detalles:</br>';
+			$RETURN .= '- Fecha y hora: '.$TURNO.'</br>';
+			$RETURN .= '- Motivo: '.$TURNERA.'</br>';
+		$RETURN .= '</p>';
+		$RETURN .= '<hr>';
+		$RETURN .= '<h3 style="color:orange;">Información importante:</h3>';
+		$RETURN .= '<p style="font-size:16px;text-align:left;">'.nl2br($MENSAJE).'</p>';
+		$RETURN .= '<hr>';
+		$RETURN .= '<p style="font-size:14px; text-align:justify;">';
+			$RETURN .= 'Si no podés asistir, te pedimos que canceles tu turno con anticipación para brindarle la oportunidad a otro afiliado! Podés hacerlo a través de:<br/>';
+			$RETURN .= '- Telefonicamente: 0810-222-0317<br/>';
+			$RETURN .= '- Web: Portal de Autogestión<br/>';
+		$RETURN .= '</p>';
+		$RETURN .= '<p>Muchas Gracias,</p>';
+		$RETURN .= '<p><b>DAS</b></p>';
+	$RETURN .= '</div>';
+	return $RETURN;
+}
+function TemplateCancelacion($AFILIADO,$TURNO, $TURNERA){
+	$RETURN = '<div style="width:450px;border: 5px solid #27AE98; padding:20px;" align="center">';
+		$RETURN .= '<img src="data:image/png;base64,'.$GLOBALS['CFG_LOGO_DAS'].'" alt="Logo"/>';
+		$RETURN .= '<br><hr>';
+		$RETURN .= '<h2 style="color:blue;"><b>Cancelacion de Turno</b></h2>';
+		$RETURN .= '<p style="font-size:16px; text-align:justify;">Hola '.$AFILIADO.',</p>';
+		$RETURN .= '<p style="font-size:16px; text-align:justify;">';
+			$RETURN .= 'Tu turno ha sido cancelado. A continuación, te compartimos los detalles:</br>';
+			$RETURN .= '- Fecha y hora: '.$TURNO.'</br>';
+			$RETURN .= '- Turno: '.$TURNERA.'</br>';
+		$RETURN .= '</p>';
+		$RETURN .= '<p>Muchas Gracias,</p>';
+		$RETURN .= '<p><b>DAS</b></p>';
+	$RETURN .= '</div>';
+	return $RETURN;
+}
+
+
+$PERMISOS_C[] = 0;
+$PERMISOS_A[] = 0;
+$PERMISOS_B[] = 0;
+$PERMISOS_M[] = 0;
+$PERMISOS_E[] = 0;
+$QuePermisos = QuerySelect("SELECT `id_categoria`,CASE WHEN `permiso` LIKE '%C%' THEN 1 ELSE 0 END AS 'C', CASE WHEN `permiso` LIKE '%A%' THEN 1 ELSE 0 END AS 'A', CASE WHEN `permiso` LIKE '%B%' THEN 1 ELSE 0 END AS 'B', CASE WHEN `permiso` LIKE '%M%' THEN 1 ELSE 0 END AS 'M', CASE WHEN `permiso` LIKE '%E%' THEN 1 ELSE 0 END AS 'E' FROM ".$DBT['PERMISOS_TURNERA']." WHERE `id_usuario`='".$C_USER['ID']."' AND (permiso LIKE '%C%' OR permiso LIKE '%A%' OR permiso LIKE '%B%' OR permiso LIKE '%E%')");
+
+if(QueryNumRows($QuePermisos) > 0 ){
+	while($RowPermisos = QueryFetch($QuePermisos)){
+		if($RowPermisos['C'] == 1){ $PERMISOS_C[] = $RowPermisos['id_categoria'];}
+		if($RowPermisos['A'] == 1){ $PERMISOS_A[] = $RowPermisos['id_categoria'];}
+		if($RowPermisos['B'] == 1){ $PERMISOS_B[] = $RowPermisos['id_categoria'];}
+		if($RowPermisos['M'] == 1){ $PERMISOS_M[] = $RowPermisos['id_categoria'];}
+		if($RowPermisos['E'] == 1){ $PERMISOS_E[] = $RowPermisos['id_categoria'];}
+	}
+}
+if($ROUTE_OPC == 'DL_Agendas'){
+	$RETURN['items'] =array();
+	if($PP['C'] != 1){EJE($RETURN);}	
+	$SEARCH = " WHERE C.`disponible`='1' AND A.`disponible`='1' AND C.`id_categoria` IN (".implode(",", $PERMISOS_C).") AND  C.`sobreturnos`=0";
+	if(CIJE('CTS_SEARCH') !== TRUE){ $SEARCH .= " AND (C.`categoria` LIKE '%".$sJ['CTS_SEARCH']."%' OR A.`profesional` LIKE '%".$sJ['CTS_SEARCH']."%' OR CONCAT(C.`categoria`,if(A.`profesional` != 'GENERAL',CONCAT(' - ',A.`profesional`),'')) LIKE '%".$sJ['CTS_SEARCH']."%')";};
+	$Que = QuerySelect("SELECT A.`id_agenda`, CONCAT(C.`categoria`,if(A.`profesional` != 'GENERAL',CONCAT(' - ',A.`profesional`),'')) AS 'agenda' FROM ".$DBT['TURNERAS_AGENDAS']." A JOIN ".$DBT['PARAMETRICAS_PSICO']." C ON A.`id_categoria`=C.`id_categoria`".$SEARCH." ORDER BY C.`categoria` ASC", "QWE_PORTAL");
+	while($Row = QueryFetch($Que)){
+		$TMP = [];
+		$TMP['ID']		= $Row['id_agenda'];
+		$TMP['VALUE']	= $Row['agenda'];
+		array_push($RETURN['items'], $TMP);
+	}
+	EJE($RETURN);
+}
+elseif($ROUTE_OPC == 'DL_Categorias'){
+	$RETURN['items'] =array();
+	if($PP['C'] != 1){EJE($RETURN);}	
+	$SEARCH = " WHERE C.`disponible`='1' AND A.`disponible`='1' AND C.`id_categoria` IN (".implode(",", $PERMISOS_C).")";
+	if(CIJE('CTS_SEARCH') !== TRUE){ $SEARCH .= " AND C.`categoria` LIKE '%".$sJ['CTS_SEARCH']."%'";};
+	$SEARCH .= " GROUP BY C.`id_categoria`";
+	$Que = QuerySelect("SELECT C.`id_categoria`,C.`categoria` FROM ".$DBT['PARAMETRICAS_PSICO']." C JOIN ".$DBT['TURNERAS_AGENDAS']." A ON A.`id_categoria`=C.`id_categoria`".$SEARCH." ORDER BY `categoria` ASC", "QWE_PORTAL");
+	while($Row = QueryFetch($Que)){
+		$TMP = [];
+		$TMP['ID']		= $Row['id_categoria'];
+		$TMP['VALUE']	= $Row['categoria'];
+		array_push($RETURN['items'], $TMP);
+	}
+	EJE($RETURN);
+}
+elseif($ROUTE_OPC == 'DL_Horarios'){
+	$RETURN['items'] =array();
+	if($PP['C'] != 1){EJE($RETURN);}
+	if(CIJE('CET_ID_CATEGORIA') === TRUE){EJE($RETURN);};
+	if(CIJE('CFA_FECHA') === TRUE){EJE($RETURN);};
+	if(!in_array($sJ['CET_ID_CATEGORIA'],$PERMISOS_C)){EJE($RETURN);}
+	
+	$AGENDA = array();
+	$QueAgendas = QuerySelect("SELECT `id_agenda`,`cierre_dia`,`cierre_horario`,`id_feriados` FROM ".$DBT['TURNERAS_AGENDAS']." WHERE `id_categoria`='".$sJ['CET_ID_CATEGORIA']."' AND `disponible`='1'","QWE_PORTAL");
+	if(QueryNumRows($QueAgendas) < 1){EJE($RETURN);};
+	while($RowAgendas = QueryFetch($QueAgendas)){
+		$AGENDA[$RowAgendas['id_agenda']]['CIERRE_DIA'] = $RowAgendas['cierre_dia'];
+		$AGENDA[$RowAgendas['id_agenda']]['CIERRE_HORARIO'] = $RowAgendas['cierre_horario'];
+		$AGENDA[$RowAgendas['id_agenda']]['ID_FERIADOS'] = $RowAgendas['id_feriados'];
+	}
+	
+	$Que = QuerySelect("CALL ".ZXS_PORTAL_T.".`SP_Turnera_Calendario`('".$sJ['CFA_FECHA']."','".$sJ['CTS_PROFESIONAL']."','".$sJ['CET_ID_CATEGORIA']."','DIA');","QWE_PORTAL");
+	while($Row = QueryFetch($Que)){
+		if($Row['turnos'] > $Row['turnos_tomados'] && $Row['feriado'] == 0 && $Row['disponible'] == 1){
+			$TMP = [];
+			$TMP['ID']		= $Row['id_agenda'].'_'.Hora_Formato($Row['hora']);
+			$TMP['VALUE']	= Hora_Formato($Row['hora']).($sJ['CTS_PROFESIONAL'] == 0 ? " - ".$Row['profesional'] : "");
+			array_push($RETURN['items'], $TMP);
+		}
+	}
+	EJE($RETURN);
+}
+elseif($ROUTE_OPC == 'DL_Profesionales'){
+	$RETURN['items'] =array();
+	$TMP = [];
+	$TMP['ID']		= 0;
+	$TMP['VALUE']	= 'VER TODAS';
+	array_push($RETURN['items'], $TMP);
+	if($PP['C'] != 1){EJE($RETURN);}
+	if(CIJE('CET_ID_CATEGORIA') === TRUE){EJE($RETURN);};
+	if(!in_array($sJ['CET_ID_CATEGORIA'],$PERMISOS_C)){EJE($RETURN);}
+	$SEARCH = " WHERE `disponible`='1' AND `id_categoria`='".$sJ['CET_ID_CATEGORIA']."'";
+	if(CIJE('CTS_SEARCH') !== TRUE){ $SEARCH .= " AND `profesional` LIKE '%".$sJ['CTS_SEARCH']."%'";};
+	$Que = QuerySelect("SELECT `id_agenda`,`profesional` FROM ".$DBT['TURNERAS_AGENDAS']." ".$SEARCH." ORDER BY `profesional` ASC","QWE_PORTAL");
+	while($Row = QueryFetch($Que)){
+		$TMP = [];
+		$TMP['ID']		= $Row['id_agenda'];
+		$TMP['VALUE']	= $Row['profesional'];
+		array_push($RETURN['items'], $TMP);
+	}
+	EJE($RETURN);
+}
+elseif($ROUTE_OPC == 'Download_Turnos'){ //TIENE CAMBIOS
+	if($PP['C'] != 1 || CIJE('CJS_DATA')){RJRE("Ocurrió un error al procesar la descarga.");}
+	if(
+		!array_key_exists('CET_ID_CATEGORIA',$sJ['CJS_DATA']) || $sJ['CJS_DATA']['CET_ID_CATEGORIA'] == '' || 
+		!array_key_exists('CTS_PROFESIONAL',$sJ['CJS_DATA']) || $sJ['CJS_DATA']['CTS_PROFESIONAL'] == '' || 
+		!array_key_exists('CFA_FECHA',$sJ['CJS_DATA']) || $sJ['CJS_DATA']['CFA_FECHA'] == ''
+
+	){RJRE("Ocurrió un error al procesar la descarga.");}
+	$TURNOS = [];
+	$TURNOS['NOMBRE']	= "TURNOS";
+	$TURNOS['FECHA']	= fecha_formato($sJ['CJS_DATA']['CFA_FECHA']);
+	$TURNOS['ROWS'] = [];
+	
+	if(!in_array($sJ['CJS_DATA']['CET_ID_CATEGORIA'], $PERMISOS_C)){ EJE($RETURN); }
+	$ID_CATEGORIA[] = $sJ['CJS_DATA']['CET_ID_CATEGORIA'];
+	$ID_AGENDA[] = $sJ['CJS_DATA']['CTS_PROFESIONAL'];
+	/* BUSCAR SOBRETURNOS */
+//NO INCLUYE LA AGENDA SOBRETURNOS --- TERMINA CREANDO UN IN(".implode(',',$ID_CATEGORIA).") QUE HACE --> IN (1,1) [BUSCA LA AGENDA PADRE NADA MAS]
+	$QueST = QuerySelect("SELECT TA.`id_agenda`, TA.`id_categoria`, TA.`profesional`, PTC.`categoria` FROM ".$DBT['TURNERAS_AGENDAS']." TA JOIN ".$DBT['PARAMETRICAS_PSICO']." PTC ON PTC.`id_categoria`=TA.`id_categoria` LEFT JOIN ".$DBT['PARAMETRICAS_PSICO']." PTCH ON PTCH.sobreturnos='1' AND PTCH.`sobreturnos_padre`=PTC.id_categoria LEFT JOIN ".$DBT['TURNERAS_AGENDAS']." TH ON TH.id_categoria=PTCH.id_categoria AND TH.profesional=TA.profesional WHERE TA.`id_categoria`='".$sJ['CJS_DATA']['CET_ID_CATEGORIA']."' AND TA.`id_agenda`='".$sJ['CJS_DATA']['CTS_PROFESIONAL']."'","QWE_PORTAL");
+	if(QueryNumRows($QueST) >0 ){
+		while($RowST = QueryFetch($QueST)){
+			if(in_array($RowST['id_categoria'], $PERMISOS_C)){
+				$ID_CATEGORIA[] = $RowST['id_categoria'];
+				// $TURNOS['AGENDA']	= $RowST['categoria']." - ".$RowST['profesional'] ;
+				$TURNOS['CATEGORIA']	= $RowST['categoria'];
+				$TURNOS['PROFESIONAL'] 	= $RowST['profesional'];
+				$ID_AGENDA[] 			= $RowST['id_agenda'];
+			}
+		}
+	}
+
+	$ARRAY_ORDER = array(1 => 'T.`horario` ASC');
+	$FORM = LISTADO_QUERY($ARRAY_ORDER); 
+	$SEARCH = "WHERE A.`id_categoria` IN (".implode(',',$ID_CATEGORIA).") AND T.`id_agenda` IN (".implode(',',$ID_AGENDA).") AND T.`fecha`='".$sJ['CJS_DATA']['CFA_FECHA']."' AND T.`estado` >= '1'";
+/*AGREGO ["-" AS NRO_AFI] Y [T.`celular`] A LA CONSULTA*/
+	$Que = QuerySelect("SELECT IF(T.`id_agenda` = '".$sJ['CJS_DATA']['CTS_PROFESIONAL']."','TURNO','SOBRETURNO') AS 'tipo', T.`id_persona`,'-' AS 'afiliado','-' AS 'dni', '-' AS 'nro_omint', '-' AS 'nro_afi', T.`celular`,T.`horario` AS 'hora',T.`estado` FROM ".$DBT['TURNERAS_TURNOS']." T JOIN ".$DBT['TURNERAS_AGENDAS']." A ON T.`id_agenda`= A.`id_agenda` ". $SEARCH." ORDER BY ".$FORM['ORDENAR']." LIMIT ".$FORM['LIMIT']." ,".$FORM['ROWS'],"QWE_PORTAL");
+	$MAP_ID_PERSONA = array();
+	if(QueryNumRows($Que) < 1){RJRE("No hay turnos pendientes para esta fecha.");}
+	while($Row = QueryFetch($Que)){
+		$TMP = [];
+		// $Row['tipo'] == 'SOBRETURNO' ? $TMP['ST'] = ' (ST)' : $TMP['ST'] = '' ; // PARA DSPS AGREGARLO AL HORARIO O ALGUNA VARIABLE CUANDO MUESTRO EL PDF -> $VAR.$VAR['ST'] --> 10.00(ST)
+		$TMP['AFILIADO'] 		= $Row['id_persona'] == 0 ? 'TURNO BLOQUEADO' :$Row['afiliado'];
+		$TMP['DNI'] 			= $Row['dni'];
+		$TMP['NRO_OMINT']	 	= $Row['nro_omint'];
+/*AGR*/	$TMP['NRO_AFI']			= $Row['nro_afi']; 
+/*AGR*/	$TMP['TELEFONO'] 		= $Row['celular'];
+		$TMP['HORA'] 			= Hora_Formato($Row['hora']);
+		$index = count($TURNOS['ROWS']);
+		array_push($TURNOS['ROWS'], $TMP);
+		unset($TMP);
+		if (!empty($Row['id_persona'])) {
+			$MAP_ID_PERSONA[$Row['id_persona']][] = $index;
+		}
+	}
+	if(count($MAP_ID_PERSONA) > 0){
+/*AGREGO AFI_NRO Y AFI_BARRA A LA CONSULTA*/
+		$Que = QuerySelect("SELECT P.`id_persona`, CONCAT(P.`apellido`,' ',P.`nombre`) AS 'afiliado', P.`dni`, `nro_omint`, P.`afi_nro`, P.`afi_barra`, C.`celular`, C.`mail`, P.`estado` FROM ".$DBT['PADRON_PERSONAS']." P LEFT JOIN ".$DBT['PADRON_CONTACTO']." C ON P.`id_persona`=C.`id_persona` WHERE P.`id_persona` IN(".implode(',', array_keys($MAP_ID_PERSONA)).")");
+		while($Row = QueryFetch($Que)){	
+			foreach ($MAP_ID_PERSONA[$Row['id_persona']] as $index) {
+				$TURNOS['ROWS'][$index]['AFILIADO'] = $Row['afiliado'];
+				$TURNOS['ROWS'][$index]['DNI'] 		= $Row['dni'];
+				$TURNOS['ROWS'][$index]['NRO_OMINT']= $Row['nro_omint'];
+/*AGREGO*/		$TURNOS['ROWS'][$index]['NRO_AFI'] 	= $Row['afi_nro']."/".$Row['afi_barra'];
+			}
+		}
+	}
+	$File = create_pdf2($TURNOS);
+	if($File['filename'] != 'Error.xlsx' && $File['file_base64'] != ''){
+		$RETURN['RESULTADO'] = 'OK';
+		$RETURN['BASE64'] = $File['file_base64'];
+		$RETURN['ARCHIVO'] = $File['filename'];
+		EJE($RETURN);
+	}
+	RJRE();
+}
+elseif($ROUTE_OPC == 'Listado_Afiliado'){
+	$RETURN['COUNT'] = 0;
+	$RETURN['TOTAL'] = 0;
+	$RETURN['PAGINAS'] = 1;
+	$RETURN['ROWS'] = [];
+	if($PP['C'] != 1){EJE($RETURN);}
+	$ARRAY_ORDER = array(1 => '`afiliado` {METHOD}', 2 => '`dni` {METHOD}', 3 => '`cuil` {METHOD}', 4 => '`fecha_nacimiento` {METHOD}', 4 => '`sexo` {METHOD}');
+	$FORM = LISTADO_QUERY($ARRAY_ORDER);
+	if($FORM['SEARCH'] == NULL){EJE($RETURN);}
+	$SEARCH = "WHERE (P.`dni`='".$FORM['SEARCH']."' AND P.`dni`>0) OR (P.`cuil`='".$FORM['SEARCH']."' AND P.`cuil` > 0) OR CONCAT(P.`apellido`,' ',P.`nombre`) LIKE '%".$FORM['SEARCH']."%'";
+	$Que = QuerySelect("SELECT P.`id_persona`, CONCAT(P.`nombre`,' ',P.`apellido`) AS 'afiliado', P.`dni`, P.`cuil`, CONCAT(VA.`tipo`,' - ',VA.`subtipo`) AS 'afiliacion', P.`fecha_nacimiento`, P.`sexo`,P.`estado` FROM ".$DBT['PADRON_PERSONAS']." P LEFT JOIN ".$DBT['V_PADRON_ACTUAL']." VA ON P.`id_persona`=VA.`id_persona`". $SEARCH." ORDER BY ".$FORM['ORDENAR']." LIMIT ".$FORM['LIMIT']." ,".$FORM['ROWS']);
+	while($Row = QueryFetch($Que)){
+		$RETURN['COUNT']++;
+		$TMP = [];
+		$TMP['ID'] 						= $Row['id_persona'];
+		$TMP['DATA']['AFILIADO'] 		= $Row['afiliado'];
+		$TMP['DATA']['DNI'] 			= $Row['dni'];
+		$TMP['DATA']['FECHA'] 			= Fecha_Formato($Row['fecha_nacimiento']);
+		$TMP['DATA']['EDAD'] 			= Calcular_Edad($Row['fecha_nacimiento']);
+		$TMP['DATA']['SEXO'] 			= $Row['sexo'];
+		$TMP['DATA']['ESTADO'] 			= AfiliadoGetCoberturaIcon($Row['estado']);
+		array_push($RETURN['ROWS'], $TMP);
+		unset($TMP);
+	}
+	$Que = QuerySelect("SELECT COUNT(*) AS 'total' FROM ".$DBT['PADRON_PERSONAS']." P LEFT JOIN ".$DBT['V_PADRON_ACTUAL']." VA ON P.`id_persona`=VA.`id_persona`". $SEARCH);
+	while($Row = QueryFetch($Que)){	
+		$RETURN['TOTAL'] = $Row['total'];
+		$RETURN['PAGINAS'] = ceil($RETURN['TOTAL']/$FORM['ROWS']);
+	}
+	EJE($RETURN);
+}
+elseif($ROUTE_OPC == 'Listado_Turnos'){
+	$RETURN['COUNT'] = 0;
+	$RETURN['TOTAL'] = 0;
+	$RETURN['PAGINAS'] = 1;
+	$RETURN['ROWS'] = [];
+	if($PP['C'] != 1 || CIJE('CtU_ADVANCE')){EJE($RETURN);}
+	$ARRAY_ORDER = array(1 => 'T.`fecha` DESC, T.`horario` DESC, CONCAT(C.`categoria`, " - ", A.`profesional`) ASC');
+	$FORM = LISTADO_QUERY($ARRAY_ORDER);
+	$SEARCH = "WHERE T.`id_persona`='".$sJ['CtU_ADVANCE']."' AND C.`id_categoria` IN (".implode(",", $PERMISOS_C).")";
+	$Que = QuerySelect("SELECT T.`id_turno`,CONCAT(C.`categoria`, ' - ', A.`profesional`) AS 'turnera',T.`fecha`,T.`horario`,T.`motivo`,T.`estado`, T.`reg_usuario` FROM ".$DBT['TURNERAS_TURNOS']." T JOIN ".$DBT['TURNERAS_AGENDAS']." A ON T.`id_agenda`=A.`id_agenda` JOIN ".$DBT['PARAMETRICAS_PSICO']." C ON A.`id_categoria`=C.`id_categoria` ". $SEARCH." ORDER BY ".$FORM['ORDENAR']." LIMIT ".$FORM['LIMIT']." ,".$FORM['ROWS'],"QWE_PORTAL");
+	while($Row = QueryFetch($Que)){
+		$RETURN['COUNT']++;
+		$TMP = [];
+		$TMP['ID'] 						= $Row['id_turno'];
+		$TMP['DATA']['TURNERA'] 		= $Row['turnera'];
+		$TMP['DATA']['FECHA'] 			= Fecha_Formato($Row['fecha']);
+		$TMP['DATA']['HORA']	 		= Hora_Formato($Row['horario']);
+		$TMP['DATA']['ESTADO'] 			= Estados($Row['estado'], $Row['reg_usuario'],$Row['motivo']);
+		array_push($RETURN['ROWS'], $TMP);
+		unset($TMP);
+	}
+	$Que = QuerySelect("SELECT COUNT(*) AS 'total' FROM ".$DBT['TURNERAS_TURNOS']." T JOIN ".$DBT['TURNERAS_AGENDAS']." A ON T.`id_agenda`=A.`id_agenda` JOIN ".$DBT['PARAMETRICAS_PSICO']." C ON A.`id_categoria`=C.`id_categoria` ". $SEARCH, "QWE_PORTAL");
+	while($Row = QueryFetch($Que)){	
+		$RETURN['TOTAL'] = $Row['total'];
+		$RETURN['PAGINAS'] = ceil($RETURN['TOTAL']/$FORM['ROWS']);
+	}
+	EJE($RETURN);
+}
+elseif($ROUTE_OPC == 'Listado_TurnosFecha'){
+	$RETURN['COUNT'] = 0;
+	$RETURN['TOTAL'] = 0;
+	$RETURN['PAGINAS'] = 1;
+	$RETURN['ROWS'] = [];
+	$RETURN['TITLE'] = '';
+	if($PP['C'] != 1 || CIJE('CJS_ADVANCE')){EJE($RETURN);}
+	if(
+		!array_key_exists('CET_ID_CATEGORIA',$sJ['CJS_ADVANCE']) || $sJ['CJS_ADVANCE']['CET_ID_CATEGORIA'] == '' || 
+		!array_key_exists('CTS_PROFESIONAL',$sJ['CJS_ADVANCE']) || $sJ['CJS_ADVANCE']['CTS_PROFESIONAL'] == '' || 
+		!array_key_exists('CFA_FECHA',$sJ['CJS_ADVANCE']) || $sJ['CJS_ADVANCE']['CFA_FECHA'] == ''
+	){EJE($RETURN);}
+	if(!in_array($sJ['CJS_ADVANCE']['CET_ID_CATEGORIA'], $PERMISOS_C)){ EJE($RETURN); }
+	$ID_CATEGORIA[] = $sJ['CJS_ADVANCE']['CET_ID_CATEGORIA'];
+	$ID_AGENDA[] = $sJ['CJS_ADVANCE']['CTS_PROFESIONAL'];
+	/* BUSCAR SOBRETURNOS */
+	$QueST = QuerySelect("SELECT TH.id_agenda,TH.id_categoria FROM ".$DBT['TURNERAS_AGENDAS']." TA JOIN ".$DBT['PARAMETRICAS_PSICO']." PTC ON PTC.`id_categoria`=TA.`id_categoria` JOIN ".$DBT['PARAMETRICAS_PSICO']." PTCH ON PTCH.sobreturnos='1' AND PTCH.`sobreturnos_padre`=PTC.id_categoria JOIN ".$DBT['TURNERAS_AGENDAS']." TH ON TH.id_categoria=PTCH.id_categoria AND TH.profesional=TA.profesional WHERE TA.`id_categoria`='".$sJ['CJS_ADVANCE']['CET_ID_CATEGORIA']."' AND TA.`id_agenda`='".$sJ['CJS_ADVANCE']['CTS_PROFESIONAL']."'","QWE_PORTAL");
+	if(QueryNumRows($QueST) >0 ){
+		while($RowST = QueryFetch($QueST)){
+			if(in_array($RowST['id_categoria'], $PERMISOS_C)){
+				$ID_CATEGORIA[] = $RowST['id_categoria'];
+				$ID_AGENDA[] = $RowST['id_agenda'];
+			}
+		}
+	}	
+	
+	$ARRAY_ORDER = array(1 => 'T.`horario` ASC');
+	$FORM = LISTADO_QUERY($ARRAY_ORDER);
+	$SEARCH = "WHERE A.`id_categoria` IN (".implode(',',$ID_CATEGORIA).") AND T.`id_agenda` IN (".implode(',',$ID_AGENDA).") AND T.`fecha`='".$sJ['CJS_ADVANCE']['CFA_FECHA']."'";
+	$Que = QuerySelect("SELECT IF(T.`id_agenda` = '".$sJ['CJS_ADVANCE']['CTS_PROFESIONAL']."','TURNO','SOBRETURNO') AS 'tipo',T.`id_turno`,T.`id_persona`,'-' AS 'afiliacion','-' AS 'afiliado','-' AS 'dni', T.`horario` AS 'hora',T.`estado`, T.`reg_usuario`, T.`celular`, T.`mail`, T.`motivo` FROM ".$DBT['TURNERAS_TURNOS']." T JOIN ".$DBT['TURNERAS_AGENDAS']." A ON T.`id_agenda`=A.`id_agenda` ". $SEARCH." ORDER BY ".$FORM['ORDENAR']." LIMIT ".$FORM['LIMIT']." ,".$FORM['ROWS'],"QWE_PORTAL");
+	$MAP_ID_PERSONA = array();
+	while($Row = QueryFetch($Que)){
+		$RETURN['COUNT']++;
+		$TMP = [];
+		$TMP['ID'] 						= $Row['id_turno'];
+		$TMP['DATA']['PERSONA'] 		= $Row['id_persona'];
+		$TMP['DATA']['TIPO'] 			= $Row['tipo'];
+		$TMP['DATA']['AFILIACION'] 		= $Row['afiliacion'];
+		$TMP['DATA']['AFILIADO'] 		= $Row['id_persona'] == 0 ? 'TURNO BLOQUEADO' :$Row['afiliado'];
+		$TMP['DATA']['DNI'] 			= $Row['dni'];
+		$TMP['DATA']['TELEFONO'] 		= $Row['celular'];
+		$TMP['DATA']['CORREO']	 		= $Row['mail'];
+		$TMP['DATA']['HORA'] 			= Hora_Formato($Row['hora']);
+		$TMP['DATA']['TURNO'] 			= Estados($Row['estado'], $Row['reg_usuario'],$Row['motivo']);
+		$index = count($RETURN['ROWS']);
+		array_push($RETURN['ROWS'], $TMP);
+		unset($TMP);
+		if (!empty($Row['id_persona'])) {
+			$MAP_ID_PERSONA[$Row['id_persona']][] = $index;
+		}
+	}
+	if(count($MAP_ID_PERSONA) > 0){
+		$Que = QuerySelect("SELECT P.`id_persona`, CONCAT(P.`apellido`,' ',P.`nombre`) AS 'afiliado', P.`dni`, C.`celular`, C.`mail`, P.`estado` FROM ".$DBT['PADRON_PERSONAS']." P LEFT JOIN ".$DBT['PADRON_CONTACTO']." C ON P.`id_persona`=C.`id_persona` WHERE P.`id_persona` IN(".implode(',', array_keys($MAP_ID_PERSONA)).")");
+		while($Row = QueryFetch($Que)){	
+			foreach ($MAP_ID_PERSONA[$Row['id_persona']] as $index) {
+				$RETURN['ROWS'][$index]['DATA']['AFILIACION'] = AfiliadoGetCoberturaIcon($Row['estado'],'FALSE');
+				$RETURN['ROWS'][$index]['DATA']['AFILIADO'] = $Row['afiliado'];
+				$RETURN['ROWS'][$index]['DATA']['DNI'] = $Row['dni'];
+				if($RETURN['ROWS'][$index]['DATA']['CORREO'] == NULL){$RETURN['ROWS'][$index]['DATA']['CORREO'] = $Row['mail'];}
+				if($RETURN['ROWS'][$index]['DATA']['TELEFONO'] == NULL){$RETURN['ROWS'][$index]['DATA']['TELEFONO'] = $Row['celular'];}
+			}
+		}
+	}
+	$Que = QuerySelect("SELECT COUNT(*) AS 'total' FROM ".$DBT['TURNERAS_TURNOS']." T JOIN ".$DBT['TURNERAS_AGENDAS']." A ON T.`id_agenda`=A.`id_agenda` ". $SEARCH, "QWE_PORTAL");
+	while($Row = QueryFetch($Que)){	
+		$RETURN['TOTAL'] = $Row['total'];
+		$RETURN['PAGINAS'] = ceil($RETURN['TOTAL']/$FORM['ROWS']);
+	}
+	EJE($RETURN);
+}
+elseif($ROUTE_OPC == 'Listado_TurnosFechaDas'){
+	$RETURN['COUNT'] = 0;
+	$RETURN['TOTAL'] = 0;
+	$RETURN['PAGINAS'] = 1;
+	$RETURN['ROWS'] = [];
+	$RETURN['TITLE'] = '';
+	if($PP['C'] != 1 || CIJE('CJS_ADVANCE') || $ROUTE_ACT != 'TurnerasDas'){EJE($RETURN);}
+	if(!array_key_exists('CFA_FECHA',$sJ['CJS_ADVANCE']) || $sJ['CJS_ADVANCE']['CFA_FECHA'] == ''){EJE($RETURN);}
+	
+	$ARRAY_ORDER = array(1 => 'T.`horario` ASC');
+	$FORM = LISTADO_QUERY($ARRAY_ORDER);
+	$SEARCH = "WHERE T.`estado` > 0 AND A.id_feriados='2' AND T.`fecha`='".$sJ['CJS_ADVANCE']['CFA_FECHA']."' AND T.`id_persona` != 0";
+	$Que = QuerySelect("SELECT T.`id_turno`,T.`id_persona`,CONCAT(PTC.`categoria`,if(A.`profesional` != 'GENERAL', CONCAT(' - ',A.`profesional`),'')) AS 'turno','-' AS 'afiliacion','-' AS 'afiliado','-' AS 'dni',T.`horario` AS 'hora',T.`estado`,T.`reg_usuario` FROM ".$DBT['TURNERAS_TURNOS']." T LEFT JOIN ".$DBT['TURNERAS_AGENDAS']." A ON T.`id_agenda`=A.`id_agenda`LEFT JOIN ".$DBT['PARAMETRICAS_PSICO']." PTC ON PTC.`id_categoria`=A.`id_categoria` ". $SEARCH." ORDER BY ".$FORM['ORDENAR']." LIMIT ".$FORM['LIMIT']." ,".$FORM['ROWS'],"QWE_PORTAL");
+	$MAP_ID_PERSONA = array();
+	while($Row = QueryFetch($Que)){
+		$RETURN['COUNT']++;
+		$TMP = [];
+		$TMP['ID'] 						= $Row['id_turno'];
+		$TMP['DATA']['PERSONA'] 		= $Row['id_persona'];
+		$TMP['DATA']['AFILIACION'] 		= $Row['afiliacion'];
+		$TMP['DATA']['AFILIADO'] 		= $Row['afiliado'];
+		$TMP['DATA']['AGENDA']	 		= $Row['turno'];
+		$TMP['DATA']['DNI'] 			= $Row['dni'];
+		$TMP['DATA']['HORA'] 			= Hora_Formato($Row['hora']);
+		$TMP['DATA']['TURNO'] 			= Estados($Row['estado'], $Row['reg_usuario']);
+		$index = count($RETURN['ROWS']);
+		array_push($RETURN['ROWS'], $TMP);
+		unset($TMP);
+		if (!empty($Row['id_persona'])) {
+			$MAP_ID_PERSONA[$Row['id_persona']][] = $index;
+		}
+	}
+	if(count($MAP_ID_PERSONA) > 0){
+		$Que = QuerySelect("SELECT P.`id_persona`, CONCAT(P.`apellido`,' ',P.`nombre`) AS 'afiliado', P.`dni`, C.`celular`, P.`estado` FROM ".$DBT['PADRON_PERSONAS']." P LEFT JOIN ".$DBT['PADRON_CONTACTO']." C ON P.`id_persona`=C.`id_persona` WHERE P.`id_persona` IN(".implode(',', array_keys($MAP_ID_PERSONA)).")");
+		while($Row = QueryFetch($Que)){	
+			foreach ($MAP_ID_PERSONA[$Row['id_persona']] as $index) {
+				$RETURN['ROWS'][$index]['DATA']['AFILIACION'] = AfiliadoGetCoberturaIcon($Row['estado'],'FALSE');
+				$RETURN['ROWS'][$index]['DATA']['AFILIADO'] = $Row['afiliado'];
+				$RETURN['ROWS'][$index]['DATA']['DNI'] = $Row['dni'];
+			}
+		}
+	}
+	$Que = QuerySelect("SELECT COUNT(*) AS 'total' FROM ".$DBT['TURNERAS_TURNOS']." T LEFT JOIN ".$DBT['TURNERAS_AGENDAS']." A ON T.`id_agenda`=A.`id_agenda`LEFT JOIN ".$DBT['PARAMETRICAS_PSICO']." PTC ON PTC.`id_categoria`=A.`id_categoria` ". $SEARCH, "QWE_PORTAL");
+	while($Row = QueryFetch($Que)){	
+		$RETURN['TOTAL'] = $Row['total'];
+		$RETURN['PAGINAS'] = ceil($RETURN['TOTAL']/$FORM['ROWS']);
+	}
+	EJE($RETURN);
+}
+elseif($ROUTE_OPC == 'Procesar_Envio'){
+	if($PP['C'] != 1){return;}
+	if(CIJE('CEI_TURNO') === TRUE){return;};
+	if(CIJE('CTS_NOTIFICACION') === TRUE){return;};
+	$Que = QuerySelect("SELECT  T.`mail` AS 'correo', A.`correo_subj`, A.`correo_mens`, CONCAT(P.`nombre`,' ',P.`apellido`) AS 'afiliado', T.`fecha`, T.`horario`,T.`estado` FROM ".$DBT['TURNERAS_TURNOS']." T JOIN ".$DBT['TURNERAS_AGENDAS']." A ON T.`id_agenda`=A.`id_agenda` JOIN ".$DBT['PADRON']." P ON P.`id_persona`=T.`id_persona` WHERE T.`id_turno`='".$sJ['CEI_TURNO']."'",'QWE_PORTAL');
+	if(QueryNumRows($Que) < 1 ){return;}
+	while($Row = QueryFetch($Que)){
+		if($sJ['CTS_NOTIFICACION'] == 'ALTA' && $Row['estado'] == 1){
+			$MSG=TemplateAlta($Row['afiliado'], $CFG_CALENDARIO['DAY'][Fecha_Formato($Row['fecha'],'N')]." ".Fecha_Formato($Row['fecha'],'d/m/Y').' a las '.Hora_Formato($Row['horario']),$Row['correo_subj'], $Row['correo_mens']);
+			Send_Mail(array(array('CORREO' => $Row['correo'], 'NOMBRE' => $Row['afiliado'])),'Confirmación de turno',$MSG, '','', 'EXT');
+		}
+		if($sJ['CTS_NOTIFICACION'] == 'BAJA' && $Row['estado'] == 0){
+			$MSG=TemplateCancelacion($Row['afiliado'], $CFG_CALENDARIO['DAY'][Fecha_Formato($Row['fecha'],'N')]." ".Fecha_Formato($Row['fecha'],'d/m/Y').' a las '.Hora_Formato($Row['horario']),$Row['correo_subj']);
+			Send_Mail(array(array('CORREO' => $Row['correo'], 'NOMBRE' => $Row['afiliado'])),'Cancelación de turno',$MSG, '','', 'EXT');
+		}
+	}	
+	return;	
+}
+elseif($ROUTE_OPC == 'Procesar_Turno'){
+	
+	if($PP['A'] == 0){RJRE("Permiso denegado");}
+	if(CIJE('CEI_ID_PERSONA') === TRUE){RJRE("No se pudo procesar el identificador del afiliado");};
+	if(CIJE('CET_ID_CATEGORIA') === TRUE){RJRE("No se pudo procesar el identificador de la turnera");};
+	if(CIJE('CEI_ID_AGENDA') === TRUE){RJRE("No se pudo procesar el identificador de la agenda");};
+	if(CIJE('CFA_FECHA') === TRUE){RJRE("No se pudo procesar la fecha del turno");};
+	if(CIJE('CHA_HORARIO') === TRUE){RJRE("No se pudo procesar el horario del turno");};
+	if(CIJE('CTS_TELEFONO') === TRUE){RJRE("No se pudo procesar el telefono");};
+	if(CIJE('CIC_CORREO') === TRUE){RJRE("No se pudo procesar el correo");};
+	IF(strlen($sJ['CTS_TELEFONO']) > 50){ RJRE("El numero de telefono supera los 50 caracteres permitidos"); }
+	
+	if(!in_array($sJ['CET_ID_CATEGORIA'],$PERMISOS_A)){ RJRE("No tenes permisos para dar este turno");}
+	
+	if(CIJE('CIB_CONFIRMA') === TRUE){ $sJ['CIB_CONFIRMA'] = FALSE; };	
+	if($sJ['CFA_FECHA'] < date("Y-m-d")){ RJRE("Ingreso Manual. Fecha Invalida"); }
+	
+	$QueAfiliado = QuerySelect("SELECT `fecha_nacimiento`,`sexo` FROM ".$DBT['PADRON_PERSONAS']." WHERE `id_persona`='".$sJ['CEI_ID_PERSONA']."' AND `estado` >= '10'");
+	if(QueryNumRows($QueAfiliado) < 1){ RJRE("El afiliado no es valido o no tiene una afiliacion activa"); }
+	while($RowAfiliado = QueryFetch($QueAfiliado)){
+		$EDAD = Calcular_Edad($RowAfiliado['fecha_nacimiento']);
+		$SEXO = $RowAfiliado['sexo'];
+	}
+
+	$QueAgenda = QuerySelect("SELECT A.`edad_minima`, A.`edad_maxima`, A.`sexo`, C.`intervalos_max_turnos`, C.`intervalo_lapso`, C.`intervalos_tipo` FROM ".$DBT['TURNERAS_AGENDAS']." A JOIN ".$DBT['PARAMETRICAS_PSICO']." C ON C.`id_categoria`=A.`id_categoria` JOIN ".$DBT['TURNERAS_AGENDAS_PERIODO']." P ON A.`id_agenda` = P.`id_agenda` JOIN ".$DBT['TURNERAS_AGENDAS_HORARIOS']." H ON P.`id_periodo`=H.`id_periodo` AND H.`dia_semana`=WEEKDAY('".$sJ['CFA_FECHA']."') + 1 WHERE C.`disponible`='1' AND A.`disponible`='1' AND C.`id_categoria`='".$sJ['CET_ID_CATEGORIA']."' AND A.`id_agenda`='".$sJ['CEI_ID_AGENDA']."' AND H.`hora`='".$sJ['CHA_HORARIO']."' AND'".$sJ['CFA_FECHA']."' BETWEEN P.`fecha_desde` AND P.`fecha_hasta`","QWE_PORTAL");
+	if(QueryNumRows($QueAgenda) < 1){ RJRE("Error al procesar el turno seleccionado"); }
+	while($RowAgenda = QueryFetch($QueAgenda)){
+		if($RowAgenda['edad_minima'] > $EDAD){ RJRE("El afiliado no tiene la edad minima necesaria"); }
+		if($RowAgenda['edad_maxima'] < $EDAD){ RJRE("El afiliado supera la edad maxima permitida"); }
+		if(!str_contains($RowAgenda['sexo'],$SEXO)){ RJRE("La turnera no admite el género registrado del afiliado."); }
+		$TURNOS_MAX_TURNOS = $RowAgenda['intervalos_max_turnos'];
+		$TURNOS_LAPSO = $RowAgenda['intervalo_lapso'];
+		$TURNOS_TIPO = $RowAgenda['intervalos_tipo'];
+	}
+	
+	$QueDup = QuerySelect("SELECT `id_turno` FROM ".$DBT['TURNERAS_TURNOS']." WHERE `id_persona`='".$sJ['CEI_ID_PERSONA']."' AND `id_agenda`='".$sJ['CEI_ID_AGENDA']."' AND `fecha`='".$sJ['CFA_FECHA']."' AND `horario`='".$sJ['CHA_HORARIO']."' AND `estado` != 0","QWE_PORTAL");
+	if(QueryNumRows($QueDup) > 0){ RJRE("Ya hay un turno registrado para el afiliado en esta agenda y horario."); }	
+	
+	$QueTurnoDisponible = QuerySelect("CALL ".ZXS_PORTAL_T.".`SP_Turno_Disponible`('".$sJ['CEI_ID_AGENDA']."','".$sJ['CFA_FECHA']."','".$sJ['CHA_HORARIO']."');","QWE_PORTAL");
+	if(QueryNumRows($QueTurnoDisponible) < 1){ RJRE("El turno ya no se encuentra disponible."); }	
+	while($RowTurnoDisponible = QueryFetch($QueTurnoDisponible)){		
+		if($RowTurnoDisponible['turno_disponible'] == 0){ RJRE("El horario del turno ya no se encuentra disponible."); }
+	}
+	$QueTurnoDisponible->closeCursor();
+	
+	if($TURNOS_MAX_TURNOS > 0 && $TURNOS_LAPSO > 0 && $TURNOS_TIPO != NULL){
+		$QueSuspension = QuerySelect("CALL ".ZXS_PORTAL_T.".`SP_Turnera_Intervalos`('".$sJ['CEI_ID_PERSONA']."','".$sJ['CET_ID_CATEGORIA']."','".$TURNOS_TIPO."','".$TURNOS_LAPSO."','".$TURNOS_MAX_TURNOS."','".$sJ['CFA_FECHA']."');","QWE_PORTAL");
+		while($RowSuspension = QueryFetch($QueSuspension)){
+			if($RowSuspension['Explicacion'] != NULL && $sJ['CIB_CONFIRMA'] == FALSE){
+				RJRC($RowSuspension['Explicacion']);
+			}
+		}
+		$QueSuspension->closeCursor();
+	}
+	
+	QueryInsert("INSERT INTO ".$DBT['TURNERAS_TURNOS']."(`id_persona`, `id_agenda`, `fecha`, `horario`, `celular`, `mail`, `reg_usuario`, `reg_fecha`, `reg_ip`) VALUES ('".$sJ['CEI_ID_PERSONA']."','".$sJ['CEI_ID_AGENDA']."','".$sJ['CFA_FECHA']."','".$sJ['CHA_HORARIO']."','".$sJ['CTS_TELEFONO']."','".$sJ['CIC_CORREO']."','".$C_USER['ID']."',NOW(), '".ClientIP()."')","QWE_PORTAL");
+	$ID_TURNERA = QueryLastId("QWE_PORTAL");
+	RJRO($ID_TURNERA);
+}
+elseif($ROUTE_OPC == 'Procesar_Turno_Anular'){
+	if($PP['A'] == 0){RJRE("Permiso denegado");}
+	if(CIJE('CEI_ID_PERSONA') === TRUE){RJRE("No se pudo procesar el identificador del afiliado");};
+	if($sJ['CEI_ID_PERSONA'] != 0){ RJRE("Esta opcion es solo para nular turnos genericos"); }
+	if(CIJE('CET_ID_CATEGORIA') === TRUE){RJRE("No se pudo procesar el identificador de la turnera");};
+	if(CIJE('CEI_ID_AGENDA') === TRUE){RJRE("No se pudo procesar el identificador de la agenda");};
+	if(CIJE('CFA_FECHA') === TRUE){RJRE("No se pudo procesar la fecha del turno");};
+	if(CIJE('CHA_HORARIO') === TRUE){RJRE("No se pudo procesar el horario del turno");};
+	$sJ['CTS_TELEFONO'] = NULL;
+	$sJ['CIC_CORREO'] = NULL;
+	if(!in_array($sJ['CET_ID_CATEGORIA'],$PERMISOS_A)){ RJRE("No tenes permisos para anular este turno");}
+	if($sJ['CFA_FECHA'] < date("Y-m-d")){ RJRE("Ingreso Manual. Fecha Invalida"); }
+	
+	$QueAgenda = QuerySelect("SELECT A.`edad_minima`, A.`edad_maxima`, A.`sexo`, C.`intervalos_max_turnos`, C.`intervalo_lapso`, C.`intervalos_tipo` FROM ".$DBT['TURNERAS_AGENDAS']." A JOIN ".$DBT['PARAMETRICAS_PSICO']." C ON C.`id_categoria`=A.`id_categoria` JOIN ".$DBT['TURNERAS_AGENDAS_PERIODO']." P ON A.`id_agenda` = P.`id_agenda` JOIN ".$DBT['TURNERAS_AGENDAS_HORARIOS']." H ON P.`id_periodo`=H.`id_periodo` AND H.`dia_semana`=WEEKDAY('".$sJ['CFA_FECHA']."') + 1 WHERE C.`disponible`='1' AND A.`disponible`='1' AND C.`id_categoria`='".$sJ['CET_ID_CATEGORIA']."' AND A.`id_agenda`='".$sJ['CEI_ID_AGENDA']."' AND H.`hora`='".$sJ['CHA_HORARIO']."' AND'".$sJ['CFA_FECHA']."' BETWEEN P.`fecha_desde` AND P.`fecha_hasta`","QWE_PORTAL");
+	if(QueryNumRows($QueAgenda) < 1){ RJRE("Error al procesar el turno seleccionado"); }
+	
+	$QueTurnoDisponible = QuerySelect("CALL ".ZXS_PORTAL_T.".`SP_Turno_Disponible`('".$sJ['CEI_ID_AGENDA']."','".$sJ['CFA_FECHA']."','".$sJ['CHA_HORARIO']."');","QWE_PORTAL");
+	if(QueryNumRows($QueTurnoDisponible) < 1){ RJRE("El turno ya no se encuentra disponible."); }	
+	while($RowTurnoDisponible = QueryFetch($QueTurnoDisponible)){		
+		if($RowTurnoDisponible['turno_disponible'] == 0){ RJRE("El horario del turno ya no se encuentra disponible."); }
+	}
+	$QueTurnoDisponible->closeCursor();
+		
+	QueryInsert("INSERT INTO ".$DBT['TURNERAS_TURNOS']."(`id_persona`, `id_agenda`, `fecha`, `horario`, `celular`, `mail`, `reg_usuario`, `reg_fecha`, `reg_ip`) VALUES ('".$sJ['CEI_ID_PERSONA']."','".$sJ['CEI_ID_AGENDA']."','".$sJ['CFA_FECHA']."','".$sJ['CHA_HORARIO']."',".QueryValue($sJ['CTS_TELEFONO']).",".QueryValue($sJ['CIC_CORREO']).",'".$C_USER['ID']."',NOW(), '".ClientIP()."')","QWE_PORTAL");
+	RJRO();
+}
+elseif($ROUTE_OPC == 'Procesar_Turno_Estado'){
+	if($PP['M'] == 0){RJRE("Permiso denegado");}
+	if(CIJE('CEI_ID_TURNO') === TRUE){RJRE("No se pudo procesar el identificador del turno");};
+	if(CIJE('CET_ESTADO') === TRUE){RJRE("No se pudo procesar el identificador del estado");};
+	if(CIJE('CTS_MOTIVO') === TRUE){ $sJ['CTS_MOTIVO'] = NULL;};	
+	$Que = QuerySelect("SELECT T.`id_turno`,T.`motivo`, T.`fecha`,T.`estado` FROM ".$DBT['TURNERAS_TURNOS']." T JOIN ".$DBT['TURNERAS_AGENDAS']." A ON A.`id_agenda`=A.`id_agenda` WHERE T.`id_turno`='".$sJ['CEI_ID_TURNO']."' AND A.`id_categoria` IN (".implode(",", $PERMISOS_M).")", "QWE_PORTAL");
+	if(QueryNumRows($Que) < 1){RJRE("El turno no se pudo identificar o no esta disponible");}
+	while($Row = QueryFetch($Que)){
+		if($Row['estado'] == 0){ RJRE("No se puede modificar un turno anulado"); }
+		if($Row['fecha'] > date("Y-m-d") && $sJ['CET_ESTADO'] != 1){ RJRE("No se puede modificar un turno antes de tiempo"); }
+		if($Row['estado'] != $sJ['CET_ESTADO'] || $Row['motivo'] != $sJ['CTS_MOTIVO']){
+			QueryUpdate("UPDATE ".$DBT['TURNERAS_TURNOS']." SET `motivo`=".QueryValue($sJ['CTS_MOTIVO']).",`reg_usuario`='".$C_USER['ID']."',`reg_fecha`=NOW(),`reg_ip`='".ClientIP()."',`estado`='".$sJ['CET_ESTADO']."' WHERE `id_turno`='".$sJ['CEI_ID_TURNO']."'","QWE_PORTAL");
+		}
+	}	
+	RJRO($sJ['CEI_ID_TURNO']);
+}
+elseif($ROUTE_OPC == 'Procesar_Turno_Borrar'){
+	if($PP['B'] == 0){RJRE("Permiso denegado");}
+	if(CIJE('CEI_ID_PERSONA') === TRUE){RJRE("No se pudo procesar el identificador del afiliado");};
+	if(CIJE('CEI_ID_TURNO') === TRUE){RJRE("No se pudo procesar el identificador del turno");};
+	if(CIJE('CTS_MOTIVO') === TRUE){$sJ['CTS_MOTIVO'] = NULL;};
+	
+	$Que = QuerySelect("SELECT T.`id_turno`, A.`id_categoria`, T.`fecha`, T.`horario` FROM ".$DBT['TURNERAS_TURNOS']." T JOIN ".$DBT['TURNERAS_AGENDAS']." A ON A.`id_agenda`=T.`id_agenda` WHERE T.`id_persona`='".$sJ['CEI_ID_PERSONA']."' AND T.`id_turno`='".$sJ['CEI_ID_TURNO']."' AND T.`estado`='1'","QWE_PORTAL");
+	if(QueryNumRows($Que) < 1){ RJRE("Error al procesar el turno seleccionado"); }
+	while($Row = QueryFetch($Que)){ if(!in_array($Row['id_categoria'],$PERMISOS_B)){ RJRE("No tenes permisos para anular este turno");}	}
+	
+	$QueSP = QuerySelect("CALL ".ZXS_PORTAL_T.".`SP_Turno_Anular`('".$sJ['CEI_ID_TURNO']."','".$CANCELAR_TURNO."')","QWE_PORTAL");
+	while($RowSP = QueryFetch($QueSP)){ if($RowSP['es_anulable'] == 0) { RJRE("El turno ya no se puede anular"); }}
+	$QueSP->closeCursor();
+	QueryUpdate("UPDATE ".$DBT['TURNERAS_TURNOS']." SET `estado`='0',`motivo`=".QueryValue($sJ['CTS_MOTIVO']).",`reg_usuario`='".$C_USER['ID']."',`reg_fecha`=NOW(),`reg_ip`='".ClientIP()."' WHERE `id_turno`='".$sJ['CEI_ID_TURNO']."'","QWE_PORTAL");
+	RJRO($sJ['CEI_ID_TURNO']);
+}
+elseif($ROUTE_OPC == 'Ver_Afiliado_Correo'){
+	$RETURN['CORREO'] = '';
+	$RETURN['TELEFONO'] = '';
+	if($PP['C'] != 1){EJE($RETURN);}
+	if(CIJE('CEI_ID_PERSONA') === TRUE){EJE($RETURN);};
+	
+	$QuePortal = QuerySelect("SELECT `celular`,`mail` FROM ".$DBT['TURNERAS_TURNOS']." WHERE `id_persona`='".$sJ['CEI_ID_PERSONA']."' AND (`celular` IS NOT NULL OR `mail` IS NOT NULL) ORDER BY `fecha` DESC,`horario` DESC LIMIT 0,1","QWE_PORTAL");
+	if(QueryNumRows($QuePortal) > 0){
+		while($RowPortal = QueryFetch($QuePortal)){
+			$RETURN['TELEFONO']	= $RowPortal['celular'];
+			$RETURN['CORREO'] 	= $RowPortal['mail'];
+		}
+	}
+	
+	$QuePadron = QuerySelect("SELECT `celular`,`mail` FROM ".$DBT['PADRON_CONTACTO']." WHERE `id_persona`='".$sJ['CEI_ID_PERSONA']."'");
+	if(QueryNumRows($QuePadron) > 0){
+		while($RowPadron = QueryFetch($QuePadron)){
+			if($RETURN['TELEFONO'] == NULL OR $RETURN['TELEFONO'] == ''){	$RETURN['TELEFONO']	= $RowPadron['celular']; }
+			if($RETURN['CORREO'] == NULL OR $RETURN['CORREO'] == ''){	$RETURN['CORREO']	= $RowPadron['mail']; }
+		}
+	}
+	EJE($RETURN);
+}
+elseif($ROUTE_OPC == 'Ver_Agenda'){
+	$RETURN['ID_CATEGORIA'] = 0;
+	$RETURN['TITLE'] = 'Ver Turnos';
+	if($PP['C'] != 1){EJE($RETURN);}
+	if(CIJE('CEI_ID_AGENDA') === TRUE){EJE($RETURN);};
+	
+	$Que = QuerySelect("SELECT C.`id_categoria`,C.`categoria`,A.`profesional` FROM ".$DBT['PARAMETRICAS_PSICO']." C JOIN ".$DBT['TURNERAS_AGENDAS']." A ON A.`id_categoria`=C.`id_categoria` WHERE C.`disponible`='1' AND A.`disponible`='1' AND C.`id_categoria` IN (".implode(",", $PERMISOS_C).") AND A.`id_agenda`='".$sJ['CEI_ID_AGENDA']."' ORDER BY `categoria` ASC", "QWE_PORTAL");
+	if(QueryNumRows($Que) > 0){
+		while($Row = QueryFetch($Que)){
+			$RETURN['ID_CATEGORIA'] 	= $Row['id_categoria'];
+			$RETURN['TITLE'] = $Row['categoria'].($Row['profesional'] != 'GENERAL' ? ' - '.$Row['profesional']:'');
+		}
+	}
+	EJE($RETURN);
+}
+elseif($ROUTE_OPC == 'Ver_Calendario'){
+	$RETURN['DISPLAY_PERIODO'] = '';
+	if($PP['C'] != 1){EJE($RETURN);}
+	if(CIJE('CFA_PERIODO') === TRUE){ EJE($RETURN);};
+	
+	$RETURN['DISPLAY_PERIODO'] = Fecha_Formato($sJ['CFA_PERIODO'], 'n');
+	if(array_key_exists($RETURN['DISPLAY_PERIODO'], $CFG_CALENDARIO['MONTH'])){
+		$RETURN['DISPLAY_PERIODO'] = $CFG_CALENDARIO['MONTH'][$RETURN['DISPLAY_PERIODO']]." ".Fecha_Formato($sJ['CFA_PERIODO'], "Y");;
+	}	
+	
+	$RETURN['CALENDARIO'] = generarSemanas($sJ['CFA_PERIODO'], ($ROUTE_ACT == 'TurnerasDas' ? true:false));
+	
+	if(CIJE('CET_ID_CATEGORIA') === TRUE || CIJE('CTS_PROFESIONAL') === TRUE || !in_array($sJ['CET_ID_CATEGORIA'],$PERMISOS_C)){	EJE($RETURN);	};
+		
+	$AGENDAS = array();
+	$ID_AGENDAS = array();
+	
+	$QueFechas = QuerySelect("CALL ".ZXS_PORTAL_T.".`SP_Turnera_Calendario`('".$sJ['CFA_PERIODO']."','".$sJ['CTS_PROFESIONAL']."','".$sJ['CET_ID_CATEGORIA']."','MES');","QWE_PORTAL");
+	
+	if(QueryNumRows($QueFechas) < 1){ EJE($RETURN);}
+	while($RowFechas = QueryFetch($QueFechas)){
+		
+		if($RowFechas['feriado'] == 0){
+			if(!in_array($RowFechas['id_agenda'],$ID_AGENDAS)){$ID_AGENDAS[] = $RowFechas['id_agenda'];}
+			if(!array_key_exists($RowFechas['fecha'],$AGENDAS)){ $AGENDAS[$RowFechas['fecha']] = array();}
+			if(!array_key_exists('TURNOS',$AGENDAS[$RowFechas['fecha']])){$AGENDAS[$RowFechas['fecha']]['TURNOS'] = 0;$AGENDAS[$RowFechas['fecha']]['TITLE'] = '';}
+			$AGENDAS[$RowFechas['fecha']]['ERROR'] = FALSE;	
+			$AGENDAS[$RowFechas['fecha']]['TURNOS'] += $RowFechas['turnos'];
+			$AGENDAS[$RowFechas['fecha']]['TURNOS'] -= $RowFechas['turnos_tomados'];
+			$AGENDAS[$RowFechas['fecha']][$RowFechas['id_agenda']][$RowFechas['hora']] = $RowFechas['turnos'];
+			if($RowFechas['disponible'] == 1){				
+				if($RowFechas['turnos'] > $RowFechas['turnos_tomados']){
+					$AGENDAS[$RowFechas['fecha']]['TITLE'] .= ($sJ['CTS_PROFESIONAL'] == 0 ? $RowFechas['profesional'].' - ' : "").Hora_Formato($RowFechas['hora']).(($RowFechas['turnos']-$RowFechas['turnos_tomados']) > 1 ? ' ('.($RowFechas['turnos']-$RowFechas['turnos_tomados']).')' : '').'&#10;';
+				}
+			}else{
+				$AGENDAS[$RowFechas['fecha']]['TURNOS'] = $AGENDAS[$RowFechas['fecha']]['TURNOS'] - ($RowFechas['turnos'] - $RowFechas['turnos_tomados']);
+			}
+		}		
+	}
+	$QueFechas->closeCursor();
+	
+	$QueTurnos = QuerySelect("SELECT T.`id_agenda`,T.`fecha`,T.`horario`,COUNT(*) AS 'turnos' FROM ".$DBT['TURNERAS_TURNOS']." T LEFT JOIN ".$DBT['TURNERAS_AGENDAS']." A ON T.`id_agenda`=A.`id_agenda` WHERE YEAR(T.`fecha`) = YEAR('".$sJ['CFA_PERIODO']."') AND MONTH(T.`fecha`) = MONTH('".$sJ['CFA_PERIODO']."') AND T.`estado` > 0 AND A.`id_categoria`='".$sJ['CET_ID_CATEGORIA']."'".($sJ['CTS_PROFESIONAL'] != 0 ? " AND T.`id_agenda` = '".$sJ['CTS_PROFESIONAL']."'" : "")." GROUP BY T.`id_agenda`,T.`fecha`,T.`horario`","QWE_PORTAL");
+	if(QueryNumRows($QueTurnos) > 0){
+		while($RowTurnos = QueryFetch($QueTurnos)){
+			if(
+				!array_key_exists($RowTurnos['fecha'],$AGENDAS) ||
+				!array_key_exists($RowTurnos['id_agenda'],$AGENDAS[$RowTurnos['fecha']]) ||
+				!array_key_exists($RowTurnos['horario'],$AGENDAS[$RowTurnos['fecha']][$RowTurnos['id_agenda']]) ||
+				$AGENDAS[$RowTurnos['fecha']][$RowTurnos['id_agenda']][$RowTurnos['horario']] < $RowTurnos['turnos']
+			){
+				$AGENDAS[$RowTurnos['fecha']]['ERROR'] = TRUE;
+			}
+		}
+	}
+	
+	if(count($AGENDAS)){
+		foreach($AGENDAS as $KEY => $VALUE){		
+			$COLOR = '';
+			$TITLE = '';
+			$CLICK = '';
+			
+			if($KEY < date("Y-m-d")){ 									$COLOR = 'PASADO';			$TITLE = 'FECHA PASADA';									}
+			elseif($VALUE['ERROR'] == TRUE){							$COLOR = 'ERROR';			$TITLE = 'AL MENOS UN TURNO ES INVALIDO!';	$CLICK = $KEY;	}
+			elseif($VALUE['TURNOS'] < 0){								$COLOR = 'ERROR';			$TITLE = 'AL MENOS UN TURNO ES INVALIDO!!';	$CLICK = $KEY;	}
+			elseif($VALUE['TURNOS'] == 0){ 								$COLOR = 'COMPLETOS'; 		$TITLE = 'SIN TURNOS'; 										}
+			elseif($VALUE['TURNOS'] > 0){ 								$COLOR = 'DISPONIBLES'; 	$TITLE = $VALUE['TITLE']; 					$CLICK = $KEY;	}
+			else{ continue; }
+			if($ROUTE_ACT == 'TurnerasCalendario'){$CLICK = $KEY;}
+			if($COLOR != ''){ Update_Fecha($RETURN['CALENDARIO'], Fecha_Formato($KEY,"d"), $PALETA_COLORES[$COLOR],$TITLE, $CLICK);	}
+		}
+	}
+	EJE($RETURN);
+}
+elseif($ROUTE_OPC == 'Ver_Ticket_Turno'){ //TIENE CAMBIOS
+	$TURNO = [];
+	if($PP['A'] != 1){EJE($RETURN);}
+	if(CIJE('CEI_ID') === TRUE){RJRE('No se pudo procesar la solicitud de impresión.');};
+// BUSCO NUMERO AFILIADO Y MOFIDICO FUNCTION.BACK -- PD:¿IMPRIME CUALQUIER AGENDA ?
+	// $Que = QuerySelect("SELECT T.`id_persona`, T.`estado`, P.`dni`, CONCAT(P.`nombre`,' ',P.`apellido`) AS 'afiliado', C.`categoria`, A.`profesional`, T.`fecha`, T.`horario`, T.`estado` FROM ".$DBT['TURNERAS_TURNOS']." T JOIN ".$DBT['TURNERAS_AGENDAS']." A ON T.`id_agenda`=A.`id_agenda` JOIN ".$DBT['PADRON']." P ON P.`id_persona`= T.`id_persona` "./*JOIN ".$DBT['PADRON_PERSONAS']." PP ON PP.`id_persona` = T.`id_persona` AND PP.`afi_nro`IS NOT NULL AND PP.`afi_barra` IS NOT NULL*/" JOIN ".$DBT['PARAMETRICAS_PSICO']." C ON C.`id_categoria` = A.`id_categoria` AND C.`disponible` = '1' WHERE T.`id_turno`='".$sJ['CEI_ID']."'",'QWE_PORTAL');
+	$Que = QuerySelect("SELECT T.`id_persona`, C.`categoria`, A.`profesional`, T.`fecha`, T.`horario`, T.`estado` FROM ".$DBT['TURNERAS_TURNOS']." T JOIN ".$DBT['TURNERAS_AGENDAS']." A ON T.`id_agenda`=A.`id_agenda` JOIN ".$DBT['PARAMETRICAS_PSICO']." C ON C.`id_categoria` = A.`id_categoria` AND C.`disponible` = '1' WHERE T.`id_turno`='".$sJ['CEI_ID']."'",'QWE_PORTAL');
+	
+	if(QueryNumRows($Que) < 1 ){RJRE('No se pudo realizar el ticket del turno seleccionado');}
+	while($Row = QueryFetch($Que)){
+		if($Row['estado'] != 1){RJRE('Solo se pueden imprimir turnos pendientes.');}
+		$TURNO['ID_PERSONA'] 	= $Row['id_persona'];
+		// $TURNO['DNI'] 			= $Row['dni'];
+		// $TURNO['AFILIADO'] 		= $Row['afiliado'];
+		$TURNO['CATEGORIA']		= $Row['categoria'];
+		$TURNO['PROFESIONAL']	= $Row['profesional'];
+		$TURNO['FECHA']		 	= Fecha_Formato($Row['fecha']);
+		$TURNO['HORARIO']	 	= Hora_Formato($Row['horario']);
+	}
+	$AFILIADO = AfiliadoGetDatos($TURNO['ID_PERSONA']); // MODIFICO EN FUNCTION.BACK
+	if($AFILIADO['ID_PERSONA'] == 0){RJRE("Ocurrió un error al imprimir el ticket.");}
+	$TURNO['NRO_AFI']	= $AFILIADO['AFI_NRO']."/".$AFILIADO['AFI_BARRA'];
+	$TURNO['DNI'] 		= $AFILIADO['DNI'];
+	$TURNO['AFILIADO'] 	= $AFILIADO['NOMBRE']." ".$AFILIADO['APELLIDO'];
+	$HTML_TICKET = create_pdf_ticket($TURNO);
+	RJRO($HTML_TICKET);
+}
+elseif($ROUTE_OPC == 'Ver_Turno_Status'){
+	$RETURN['ID_TURNO'] = 0;
+	if($PP['M'] != 1){EJE($RETURN);}
+	if(CIJE('CEI_ID_TURNO') === TRUE){EJE($RETURN);};
+	
+	$Que = QuerySelect("SELECT T.`id_turno`,T.`motivo`,T.`estado` FROM ".$DBT['TURNERAS_TURNOS']." T JOIN ".$DBT['TURNERAS_AGENDAS']." A ON A.`id_agenda`=A.`id_agenda` WHERE T.`id_turno`='".$sJ['CEI_ID_TURNO']."' AND A.`id_categoria` IN (".implode(",", $PERMISOS_M).")", "QWE_PORTAL");
+	if(QueryNumRows($Que) > 0){
+		while($Row = QueryFetch($Que)){
+			$RETURN['ID_TURNO'] = $Row['id_turno'];
+			$RETURN['MOTIVO'] 	= $Row['motivo'];
+			$RETURN['ESTADO'] 	= $Row['estado'];
+		}
+	}
+	EJE($RETURN);
+}
+else{
+	EE("NO_SE_PUEDE_PROCESAR_LA_SOLICITUD");
+}
+
+function create_pdf2($TURNOS){ //LO USO EN VEZ DE PDF POR EL TABLE HEAD Y TABLE ROW 
+	/*$TURNOS =>
+		[NOMBRE] => TURNOS
+		[CATEGORIA] => ODONTOLOGIA
+		[PROFESIONAL] => PROFESIONAL 1
+		[FECHA] => 08-08-2025
+		[ROWS] => [0] => 
+					[ST] => 
+					[AFILIADO] => FIGUEIRA ALEXIS DAMIAN
+					[DNI] => 39490719
+					[TELEFONO] => 1538519426
+					[NRO_OMINT] => 4929658500018
+					[NRO_AFI] => 47257/1
+					[HORA] => 10:00
+	*/
+	$TURNOS['AGENDA'] = $TURNOS['CATEGORIA']." - ".$TURNOS['PROFESIONAL'];
+	$MT = "100";
+	$MTH = "60";
+	$MB = "50";
+	$MBH = "30";
+	$formatterES = new NumberFormatter("es", NumberFormatter::SPELLOUT);
+	$MAX_ROWS = 27;
+	
+	$STYLE = '<style>';
+		$STYLE .= 	'body		{ size: A4;font-size: 12px;color: #333;font-family: "Roboto Condensed", sans-serif ; }'; /*  border: 1px solid red; */
+		$STYLE .= 	'@page		{ size: A4 ; margin: '.($MT+30).'px 25px 30px 25px!important}';
+		$STYLE .= 	'@page 		{ @bottom-center { content: element(footer); }}';
+		$STYLE .= 	'.header 	{ position:fixed; top:-'.($MT+10).'px; left:0; right:0; width:100%; }';/* border: 1px solid green; */
+		$STYLE .= 	'#footer 	{ width: 100%; text-align: center; font-size: 12px; height: 50px; margin: 30px 0px 0px 0px; }';
+		$STYLE .= 	'.cabecera	{ background: #ececec;overflow: hidden;height: '.$MTH.'px; padding: 15px; border-radius: 5px; }'; /* border: 1px solid green; */
+		$STYLE .= 	'.normas	{ position:absolute; top:20px; left:14px; width:170px; height:22px; line-height:20px; font-weight:700; border-radius:5px; text-align:center;}';
+		$STYLE .= 	'.fecha		{ position:absolute; top:20px; right:14px; width:99px; height:22px; line-height:20px; font-weight:700; background:#bdbdbd; color:#333; border-radius:5px; text-align:center;}';
+		$STYLE .= 	'.leyenda	{ margin-top: 8px; font-size: 10px; font-style: italic; color: #333 }';
+		$STYLE .=  	'.label 	{ background: #bdbdbd; margin-top: 10px; font-weight: 700; border-radius: 5px; display: inline-block; padding: 5px 10px; text-align: center; line-height: 1.2; }';
+		$STYLE .=  	'.label div { margin: 2px 0; white-space: nowrap; }';
+		$STYLE .= 	'table 		{ width: 100%; font-size: 12px; border-collapse: collapse; }';
+		$STYLE .= 	'td 		{ height: 35px; }';
+		$STYLE .= 	'.pagina	{ position: absolute; bottom: +'.($MB-30).'px; left:0; right:0; width:100%; height: '.$MBH.'px;}';
+	$STYLE .= '</style>';
+	
+	$HEADER = '<div class="header">';
+		$HEADER .= '<div class="cabecera" align="center">';
+			$HEADER .= '<div class="label" align="left">';
+				$HEADER .= '<div>'.$TURNOS['AGENDA']." - ".$TURNOS['FECHA'].'</div>';
+			$HEADER .= '</div>'; 
+		$HEADER .= '</div>';
+	$HEADER .= '</div>';
+	$pages = array_chunk($TURNOS['ROWS'], $MAX_ROWS);
+	$BODY = '<div class="divbody">';
+		$BODY .= '<table style="color:#333; border-collapse: collapse;" border=1 width="100%">';
+			$BODY .= CreateTableHead($TURNOS['CATEGORIA'], array_keys($TURNOS['ROWS'][0]));
+			foreach ($pages as $pageIndex => $rows){
+			$BODY .= '<tbody>';
+				foreach($rows as $K){
+					$BODY .= CreateTableRow($TURNOS['CATEGORIA'], $K);
+				}
+			$BODY .= '</tbody>';
+			}
+		$BODY .= '</table><br/>';
+	$BODY .= '</div>';
+
+	$PDF = $STYLE.$HEADER.$BODY;
+	$dompdf = new Dompdf();
+	$dompdf->set_option('isHtml5ParserEnabled', true);
+	$dompdf->set_option('isPhpEnabled', true);
+	$dompdf->loadHtml($PDF, "UTF-8");
+	$dompdf->setPaper("A4", "portrait");
+	$dompdf->set_option('defaultMediaType', 'all');
+	$dompdf->set_option('isFontSubsettingEnabled', true);
+	$dompdf->render();
+	$pdfOutput = $dompdf->output();
+	$base64PDF = base64_encode($pdfOutput);
+	return array(
+		'file_base64' => $base64PDF,
+		'filename' => $TURNOS['NOMBRE'].'.pdf'
+	);
+}
+
+
+//CODIGO MIO 
+function DC($var) {
+	echo json_encode($var, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+}
+function DD($var) {
+	echo json_encode($var, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+    die();
+}
+function CreateTableHead($CATEGORIA, $ROW){
+	$HEAD = '<thead>';
+		$HEAD .= '<tr>';
+			foreach($ROW as $KEY){
+				$width = '20%'; 
+				if($CATEGORIA == 'ODONTOLOGIA' && $KEY == 'NRO_OMINT'){ continue; }
+				if($CATEGORIA != 'ODONTOLOGIA' && $KEY == 'NRO_AFI'){ continue; }
+				if($CATEGORIA != 'ODONTOLOGIA' && $KEY == 'TELEFONO'){ continue; }
+				if($KEY == 'AFILIADO'){ $width = '30%';}
+				elseif($KEY == 'DNI'){ $width = '15%';}
+				elseif($KEY == 'NRO_AFI'){ $width = '20%';}
+				elseif($KEY == 'NRO_OMINT'){ $width = '20%';}
+				elseif($KEY == 'HORA'){ $width = '15%';}
+				$HEAD .= '<th style="border: 1px solid #bdbdbd; border-collapse: collapse; width: '.$width.';">'.$KEY.'</th>';
+			}
+			if($CATEGORIA  != 'ODONTOLOGIA') {$HEAD .= '<th style="border: 1px solid #bdbdbd; border-collapse: collapse; width: 20%;">FIRMA</th>';;}
+		$HEAD .= '</tr>';
+	$HEAD .= '</thead>';
+	return $HEAD;
+}
+function CreateTableRow($CATEGORIA,$ROW){
+	$BODY = '<tr>';
+		foreach($ROW as $KEY => $VALUE){
+			if($CATEGORIA == 'ODONTOLOGIA' && $KEY == 'NRO_OMINT'){continue;}
+			if($CATEGORIA != 'ODONTOLOGIA' && $KEY == 'NRO_AFI'){continue;}
+			if($CATEGORIA != 'ODONTOLOGIA' && $KEY == 'TELEFONO'){continue; }
+			$BODY .= '<td style="border: 1px solid #bdbdbd;border-collapse: collapse; text-align: center;">'.$VALUE.'</td>';
+		}
+		if($CATEGORIA != 'ODONTOLOGIA'){ $BODY .= '<td style="border: 1px solid #bdbdbd;border-collapse: collapse; text-align: center;"></td>'; }
+	$BODY .= '</tr>';
+	return $BODY;
+};
+function TurnoAnulado($ESTADO, $VALOR) {
+	// return $ESTADO == '0' ? "<span style='text-decoration: line-through; text-decoration-color: #696969; color: red;'>".$VALOR."</span>" : $VALOR;
+    return $ESTADO == '0' ? "<s>".$VALOR."</s>" : $VALOR;
+}
+function create_ticket($TURNO){
+	list($dia, $mes, $año) = explode('-', $TURNO['FECHA']);
+	$HTML = '<html>';
+		$HTML .= '<head>';
+			$HTML .= '<meta charset="UTF-8">';
+			$HTML .= '<style>';
+				$HTML .= 'body			{ font-family:monospace; font-size:14px; margin:0; padding:0; }';
+				$HTML .= '.ticket-container { width:70mm; margin:0 auto; padding:5px; }';
+				$HTML .= '.ticket		{ border:1px solid black; padding:5px; }';
+				$HTML .= '.title		{ font-weight:bold; text-align:center; margin-bottom:5px; font-size:14px; }';
+				$HTML .= '.line 		{ margin-bottom:3px; }';
+				$HTML .= '.firma 		{ margin-top:35px; border-top:1px solid black; text-align:center; font-size:11px; padding:2px 10px 0px 10px;}';
+				$HTML .= '@media print 	{ ';
+					$HTML .= '@page 		{ size:auto; margin:0; }';
+					$HTML .= 'body			{ margin:0; padding:0; }';
+				$HTML .= '}';
+			$HTML .= '</style>';
+		$HTML .= '</head>';
+		$HTML .= '<body>';
+			$HTML .= '<div class="ticket-container">';
+				$HTML .= '<div class="ticket">';
+					$HTML .= '<div class="title">DIRECCIÓN DE AYUDA SOCIAL PARA EL PERSONAL DEL CONGRESO DE LA NACIÓN</div>';
+					$HTML .= '<div class="line">TURNO '.$TURNO['CATEGORIA'].'</div>';
+					$HTML .= '<div class="line">Día: '.$dia.' Mes: '.$mes.' Año: '.$año.'</div>';
+					$HTML .= '<div class="line">Profesional Dr.: '.$TURNO['PROFESIONAL'].'</div>';
+					// $HTML .= '<div class="line">Profesional Dr.: Maria Belen Piccardo</div>';
+					$HTML .= '<div class="line">Consultorio Nº: ___ Hora: '.$TURNO['HORARIO'].'</div>';
+					$HTML .= '<div class="line">Paciente: '.$TURNO['AFILIADO'].'</div>';
+					$HTML .= '<div class="line">Afiliado Nº: '.$TURNO['NRO_AFI'].'</div>';
+					$HTML .= '<div class="firma">Firma del agente interviniente</div>';
+				$HTML .= '</div>';
+			$HTML .= '</div>';
+		$HTML .= '</body>';
+	$HTML .= '</html>';
+	return $HTML;
+}
+function create_ticket_directo($TURNO){
+	list($dia, $mes, $año) = explode('-', $TURNO['FECHA']);
+	$HTML = '<html>';
+		$HTML .= '<head>';
+			$HTML .= '<meta charset="UTF-8">';
+			$HTML .= '<style>';
+				$HTML .= 'body { font-family:monospace; font-size:14px; margin:0; padding:0; }';
+				$HTML .= '.ticket-container { width:70mm; margin:0 auto; padding:5px; }';
+				$HTML .= '.ticket { border:1px solid black; padding:5px; }';
+				$HTML .= '.title { font-weight:bold; text-align:center; margin-bottom:5px; font-size:14px; }';
+				$HTML .= '.line { margin-bottom:3px; }';
+				$HTML .= '.firma { margin-top:35px; border-top:1px solid black; text-align:center; font-size:11px; padding:2px 10px 0px 10px;}';
+				$HTML .= '@media print { @page { size:auto; margin:0; } body { margin:0; padding:0; } }';
+			$HTML .= '</style>';
+		$HTML .= '</head>';
+		// 👇 Acá el truco: impresión automática
+		$HTML .= '<body onload="window.print(); window.close();">';
+			$HTML .= '<div class="ticket-container">';
+				$HTML .= '<div class="ticket">';
+					$HTML .= '<div class="title">DIRECCIÓN DE AYUDA SOCIAL PARA EL PERSONAL DEL CONGRESO DE LA NACIÓN</div>';
+					$HTML .= '<div class="line">TURNO '.$TURNO['CATEGORIA'].'</div>';
+					$HTML .= '<div class="line">Día: '.$dia.' Mes: '.$mes.' Año: '.$año.'</div>';
+					$HTML .= '<div class="line">Profesional Dr.: '.$TURNO['PROFESIONAL'].'</div>';
+					$HTML .= '<div class="line">Consultorio Nº: ___ Hora: '.$TURNO['HORARIO'].'</div>';
+					$HTML .= '<div class="line">Paciente: '.$TURNO['AFILIADO'].'</div>';
+					$HTML .= '<div class="line">Afiliado Nº: '.$TURNO['NRO_AFI'].'</div>';
+					$HTML .= '<div class="firma">Firma del agente interviniente</div>';
+				$HTML .= '</div>';
+			$HTML .= '</div>';
+		$HTML .= '</body>';
+	$HTML .= '</html>';
+	return $HTML;
+}
+if($ROUTE_OPC == 'Download_Turnos2'){
+	if($PP['C'] != 1 || CIJE('CJS_DATA')){RJRE("Ocurrió un error al procesar la descarga.");}
+	if(
+		!array_key_exists('CET_ID_CATEGORIA',$sJ['CJS_DATA']) || $sJ['CJS_DATA']['CET_ID_CATEGORIA'] == '' || 
+		!array_key_exists('CTS_PROFESIONAL',$sJ['CJS_DATA']) || $sJ['CJS_DATA']['CTS_PROFESIONAL'] == '' || 
+		!array_key_exists('CFA_FECHA',$sJ['CJS_DATA']) || $sJ['CJS_DATA']['CFA_FECHA'] == ''
+
+	){RJRE("Ocurrió un error al procesar la descarga.");}
+	$TURNOS = [];
+	$TURNOS['NOMBRE']	= "TURNOS";
+	$TURNOS['FECHA']	= fecha_formato($sJ['CJS_DATA']['CFA_FECHA']);
+	$TURNOS['ROWS'] = [];
+	$TURNOS['ODONTOLOGIA'] = FALSE;
+	
+	if(!in_array($sJ['CJS_DATA']['CET_ID_CATEGORIA'], $PERMISOS_C)){ EJE($RETURN); }
+	$ID_CATEGORIA[] = $sJ['CJS_DATA']['CET_ID_CATEGORIA'];
+	$ID_AGENDA[] = $sJ['CJS_DATA']['CTS_PROFESIONAL'];
+	/* BUSCAR SOBRETURNOS */
+	
+	// MODIFIQUE EL SELECT DE LA CONSULTA DE TA. A TH. PORQUE DEVOLVIA LA MISMA AGENDA DESPUES QUEDABA EN LA SIGUIENTE QUERY ID_CATEGORIA IN(7,7) Y LO MISMO AGENDA. DE ESTA MANERA DE VUELVE NULL Y LO SALVO CON EL ROW[ID_AGENDA] != '' LA CATEGORIA ME SIRVE PARA DESPUES CREAR EL TITULO DEL PDF (Y NO HACER UN JOINEO MAS EN LA SIGUIENTE CONSULTA)
+	// EN LISTADOS_TURNOS_FECHA AGARRAS TH (YO LE AGREGUE CATEGORIA POR ESO SIEMPRE ES MAYOR A 0. Y POR ESO LO SALVO CON EL IF  != '' CREO QUE ES UNA CROTADA MAL PERO EL CEREBRO TA ROTO HOY 
+	$QueST = QuerySelect("SELECT TH.`id_agenda`, TH.`id_categoria`, TH.`profesional`, PTC.`categoria` FROM ".$DBT['TURNERAS_AGENDAS']." TA JOIN ".$DBT['PARAMETRICAS_PSICO']." PTC ON PTC.`id_categoria`=TA.`id_categoria` LEFT JOIN ".$DBT['PARAMETRICAS_PSICO']." PTCH ON PTCH.sobreturnos='1' AND PTCH.`sobreturnos_padre`=PTC.id_categoria LEFT JOIN ".$DBT['TURNERAS_AGENDAS']." TH ON TH.id_categoria=PTCH.id_categoria AND TH.profesional=TA.profesional WHERE TA.`id_categoria`='".$sJ['CJS_DATA']['CET_ID_CATEGORIA']."' AND TA.`id_agenda`='".$sJ['CJS_DATA']['CTS_PROFESIONAL']."'","QWE_PORTAL");
+	if(QueryNumRows($QueST) >0 ){
+		while($RowST = QueryFetch($QueST)){
+			if(in_array($RowST['id_categoria'], $PERMISOS_C)){
+				if ($RowST['id_agenda'] != ''){
+					$ID_CATEGORIA[] = $RowST['id_categoria'];
+					$ID_AGENDA[] = $RowST['id_agenda'];
+				}
+				$TURNOS['AGENDA'] = $RowST['categoria'];
+				if(Str_Up($RowST['categoria']) == 'ODONTOLOGIA'){$TURNOS['ODONTOLOGIA'] = TRUE;}
+			}
+		}
+	}
+
+	$ARRAY_ORDER = array(1 => 'T.`horario` ASC');
+	$FORM = LISTADO_QUERY($ARRAY_ORDER); 
+	$SEARCH = "WHERE A.`id_categoria` IN (".implode(',',$ID_CATEGORIA).") AND T.`id_agenda` IN (".implode(',',$ID_AGENDA).") AND T.`fecha`='".$sJ['CJS_DATA']['CFA_FECHA']."' AND T.`estado` >= '1'";
+	
+	$Que = QuerySelect("SELECT IF(T.`id_agenda` = '".$sJ['CJS_DATA']['CTS_PROFESIONAL']."','TURNO','SOBRETURNO') AS 'tipo', A.`profesional`, T.`id_persona`,'-' AS 'afiliado','-' AS 'dni', '-' AS 'nro_omint', '-' AS 'nro_afi', T.`horario` AS 'hora',T.`estado`, T.`celular`, T.`mail` FROM ".$DBT['TURNERAS_TURNOS']." T JOIN ".$DBT['TURNERAS_AGENDAS']." A ON T.`id_agenda`= A.`id_agenda` ". $SEARCH." ORDER BY ".$FORM['ORDENAR']." LIMIT ".$FORM['LIMIT']." ,".$FORM['ROWS'],"QWE_PORTAL");
+	$MAP_ID_PERSONA = array();
+	if(QueryNumRows($Que) < 1){RJRE("No hay turnos pendientes para esta fecha.");}
+	while($Row = QueryFetch($Que)){
+		$PROFESIONAL = $Row['profesional'];
+		$TMP = [];
+		if($Row['id_persona'] == 0){continue;} // SI EVITAMOS LOS TURNOS 'BLOQUEADOS'
+		$TMP['AFILIADO'] 		= $Row['afiliado'] ;
+		// $TMP['AFILIADO'] 		= $Row['id_persona'] == 0 ? 'TURNO ANULADO' :$Row['afiliado'];  // SI NO EVITAMOS LOS TURNOS BLOQUEADOS
+		
+		$TMP['DNI'] 			= $Row['dni'];
+		$TMP['NRO_OMINT']	 	= $Row['nro_omint'];
+		$TMP['NRO_AFI']	 		= $Row['nro_afi'];
+		$TMP['TELEFONO'] 		= $Row['celular'];
+		
+		$Row['tipo'] == 'SOBRETURNO' ? $ST = '(ST)' : $ST = '' ;
+		$TMP['HORA'] 			= Hora_Formato($Row['hora']).$ST;
+		$index = count($TURNOS['ROWS']);
+		array_push($TURNOS['ROWS'], $TMP);
+		unset($TMP);
+		if (!empty($Row['id_persona'])) {
+			$MAP_ID_PERSONA[$Row['id_persona']][] = $index;
+		}
+	}
+	$TURNOS['AGENDA'] .= " - ".$PROFESIONAL ;
+	if(count($MAP_ID_PERSONA) > 0){
+		$Que = QuerySelect("SELECT P.`id_persona`, CONCAT(P.`apellido`,' ',P.`nombre`) AS 'afiliado', P.`dni`, CONCAT(P.`afi_nro`, '/', P.`afi_barra`) AS 'nro_afi', `nro_omint`,C.`celular`, C.`mail`, P.`estado` FROM ".$DBT['PADRON_PERSONAS']." P LEFT JOIN ".$DBT['PADRON_CONTACTO']." C ON P.`id_persona`=C.`id_persona` WHERE P.`id_persona` IN(".implode(',', array_keys($MAP_ID_PERSONA)).")");
+		while($Row = QueryFetch($Que)){	
+			foreach ($MAP_ID_PERSONA[$Row['id_persona']] as $index) {
+				$TURNOS['ROWS'][$index]['AFILIADO'] = $Row['afiliado'];
+				$TURNOS['ROWS'][$index]['DNI'] 		= $Row['dni'];
+				$TURNOS['ROWS'][$index]['NRO_OMINT']= $Row['nro_omint'];
+				$TURNOS['ROWS'][$index]['NRO_AFI'] 	= $Row['nro_afi'];
+			}
+		}
+	}
+	if(count($TURNOS['ROWS']) >= 1){
+		$File = create_pdf($TURNOS);
+		if($File['filename'] != 'Error.xlsx' && $File['file_base64'] != ''){
+			$RETURN['RESULTADO'] = 'OK';
+			$RETURN['BASE64'] = $File['file_base64'];
+			$RETURN['ARCHIVO'] = $File['filename'];
+			EJE($RETURN);
+		}
+	}
+	RJRE("NO HAY TURNOS ACTIVOS");
+}
+elseif($ROUTE_OPC == 'Listado_TurnosFecha2'){
+	$RETURN['COUNT'] = 0;
+	$RETURN['TOTAL'] = 0;
+	$RETURN['PAGINAS'] = 1;
+	$RETURN['ROWS'] = [];
+	$RETURN['TITLE'] = '';
+	if($PP['C'] != 1 || CIJE('CJS_ADVANCE')){EJE($RETURN);}
+	if(
+		!array_key_exists('CET_ID_CATEGORIA',$sJ['CJS_ADVANCE']) || $sJ['CJS_ADVANCE']['CET_ID_CATEGORIA'] == '' || 
+		!array_key_exists('CTS_PROFESIONAL',$sJ['CJS_ADVANCE']) || $sJ['CJS_ADVANCE']['CTS_PROFESIONAL'] == '' || 
+		!array_key_exists('CFA_FECHA',$sJ['CJS_ADVANCE']) || $sJ['CJS_ADVANCE']['CFA_FECHA'] == ''
+	){EJE($RETURN);}
+	if(!in_array($sJ['CJS_ADVANCE']['CET_ID_CATEGORIA'], $PERMISOS_C)){ EJE($RETURN); }
+	$ID_CATEGORIA[] = $sJ['CJS_ADVANCE']['CET_ID_CATEGORIA'];
+	$ID_AGENDA[] = $sJ['CJS_ADVANCE']['CTS_PROFESIONAL'];
+	/* BUSCAR SOBRETURNOS */
+	$QueST = QuerySelect("SELECT TH.id_agenda,TH.id_categoria FROM ".$DBT['TURNERAS_AGENDAS']." TA JOIN ".$DBT['PARAMETRICAS_PSICO']." PTC ON PTC.`id_categoria`=TA.`id_categoria` JOIN ".$DBT['PARAMETRICAS_PSICO']." PTCH ON PTCH.sobreturnos='1' AND PTCH.`sobreturnos_padre`=PTC.id_categoria JOIN ".$DBT['TURNERAS_AGENDAS']." TH ON TH.id_categoria=PTCH.id_categoria AND TH.profesional=TA.profesional WHERE TA.`id_categoria`='".$sJ['CJS_ADVANCE']['CET_ID_CATEGORIA']."' AND TA.`id_agenda`='".$sJ['CJS_ADVANCE']['CTS_PROFESIONAL']."'","QWE_PORTAL");
+	if(QueryNumRows($QueST) >0 ){
+		while($RowST = QueryFetch($QueST)){
+			if(in_array($RowST['id_categoria'], $PERMISOS_C)){
+				$ID_CATEGORIA[] = $RowST['id_categoria'];
+				$ID_AGENDA[] = $RowST['id_agenda'];
+			}
+		}
+	}	
+	
+	$ARRAY_ORDER = array(1 => 'T.`horario` ASC');
+	$FORM = LISTADO_QUERY($ARRAY_ORDER);
+	$SEARCH = "WHERE A.`id_categoria` IN (".implode(',',$ID_CATEGORIA).") AND T.`id_agenda` IN (".implode(',',$ID_AGENDA).") AND T.`fecha`='".$sJ['CJS_ADVANCE']['CFA_FECHA']."'";
+	$Que = QuerySelect("SELECT IF(T.`id_agenda` = '".$sJ['CJS_ADVANCE']['CTS_PROFESIONAL']."','TURNO','SOBRETURNO') AS 'tipo',T.`id_turno`,T.`id_persona`,'-' AS 'afiliacion','-' AS 'afiliado','-' AS 'dni', T.`horario` AS 'hora',T.`estado`, T.`reg_usuario`, T.`celular`, T.`mail` FROM ".$DBT['TURNERAS_TURNOS']." T JOIN ".$DBT['TURNERAS_AGENDAS']." A ON T.`id_agenda`=A.`id_agenda` ". $SEARCH." ORDER BY ".$FORM['ORDENAR']." LIMIT ".$FORM['LIMIT']." ,".$FORM['ROWS'],"QWE_PORTAL");
+	$MAP_ID_PERSONA = array();
+	while($Row = QueryFetch($Que)){
+		$RETURN['COUNT']++;
+		$TMP = [];
+		$TMP['ID'] 						= $Row['id_turno'];
+		$TMP['DATA']['PERSONA'] 		= $Row['id_persona'];
+		$TMP['DATA']['TIPO'] 			= TurnoAnulado($Row['estado'], $Row['tipo']);
+		$TMP['DATA']['AFILIACION'] 		= $Row['afiliacion'];
+		$TMP['DATA']['AFILIADO'] 		= $Row['id_persona'] == 0 ? 'TURNO ANULADO' :$Row['afiliado'];
+		$TMP['DATA']['DNI'] 			= TurnoAnulado($Row['estado'], $Row['dni']);
+		$TMP['DATA']['TELEFONO'] 		= TurnoAnulado($Row['estado'], $Row['celular']);
+		$TMP['DATA']['CORREO']	 		= TurnoAnulado($Row['estado'], $Row['mail']);
+		$TMP['DATA']['HORA'] 			= TurnoAnulado($Row['estado'], Hora_Formato($Row['hora']));
+		$TMP['DATA']['TURNO'] 			= TurnoAnulado($Row['estado'],Estados($Row['estado'], $Row['reg_usuario']));
+		$TMP['DATA']['ESTADO'] 			= $Row['estado'];
+		$index = count($RETURN['ROWS']);
+		array_push($RETURN['ROWS'], $TMP);
+		unset($TMP);
+		if (!empty($Row['id_persona'])) {
+			$MAP_ID_PERSONA[$Row['id_persona']][] = $index;
+		}
+	}
+	if(count($MAP_ID_PERSONA) > 0){
+		$Que = QuerySelect("SELECT P.`id_persona`, CONCAT(P.`apellido`,' ',P.`nombre`) AS 'afiliado', P.`dni`, C.`celular`, C.`mail`, P.`estado` FROM ".$DBT['PADRON_PERSONAS']." P LEFT JOIN ".$DBT['PADRON_CONTACTO']." C ON P.`id_persona`=C.`id_persona` WHERE P.`id_persona` IN(".implode(',', array_keys($MAP_ID_PERSONA)).")");
+		while($Row = QueryFetch($Que)){	
+			foreach ($MAP_ID_PERSONA[$Row['id_persona']] as $index) {
+				$RETURN['ROWS'][$index]['DATA']['AFILIACION'] = AfiliadoGetCoberturaIcon($Row['estado'],'FALSE');
+				$RETURN['ROWS'][$index]['DATA']['AFILIADO'] =  TurnoAnulado($RETURN['ROWS'][$index]['DATA']['ESTADO'], $Row['afiliado']);
+				$RETURN['ROWS'][$index]['DATA']['DNI'] =  TurnoAnulado($RETURN['ROWS'][$index]['DATA']['ESTADO'], $Row['dni']);
+				if($RETURN['ROWS'][$index]['DATA']['CORREO'] == NULL){$RETURN['ROWS'][$index]['DATA']['CORREO'] =  TurnoAnulado($RETURN['ROWS'][$index]['DATA']['ESTADO'], $Row['mail']);}
+				if($RETURN['ROWS'][$index]['DATA']['TELEFONO'] == NULL){$RETURN['ROWS'][$index]['DATA']['TELEFONO'] =  TurnoAnulado($RETURN['ROWS'][$index]['DATA']['ESTADO'], $Row['celular']);}
+			}
+		}
+	}
+	$Que = QuerySelect("SELECT COUNT(*) AS 'total' FROM ".$DBT['TURNERAS_TURNOS']." T JOIN ".$DBT['TURNERAS_AGENDAS']." A ON T.`id_agenda`=A.`id_agenda` ". $SEARCH, "QWE_PORTAL");
+	while($Row = QueryFetch($Que)){	
+		$RETURN['TOTAL'] = $Row['total'];
+		$RETURN['PAGINAS'] = ceil($RETURN['TOTAL']/$FORM['ROWS']);
+	}
+	EJE($RETURN);
+}
+elseif($ROUTE_OPC == 'Imprimir_Ticket_Directo'){ // Directo del boton imprimir 
+	$TURNO = [];
+	// $sJ['CEI_ID'] = '';
+	if($PP['A'] != 1){EJE($RETURN);}
+	if(CIJE('CEI_ID') === TRUE){RJRE('No se pudo procesar la solicitud de impresión.');};
+	//agregar el estado = 1 a la query ?¿ y ajustar AND `id_categoria` = (A LOS ID QUE CORRESPONDAN DE PRODUCCION para turnos y ¿sobreturnos[capaz es al pedo] sobreturnos?)
+	$Que = QuerySelect("SELECT T.`estado`, CONCAT(PP.`afi_nro`, '/', PP.`afi_barra`) AS 'nro_afi', P.`dni`, CONCAT(P.`nombre`,' ',P.`apellido`) AS 'afiliado', C.`categoria`, A.`profesional`, T.`fecha`, T.`horario`, T.`estado` FROM ".$DBT['TURNERAS_TURNOS']." T JOIN ".$DBT['TURNERAS_AGENDAS']." A ON T.`id_agenda`=A.`id_agenda` AND A.`id_categoria` IN (1,3) JOIN ".$DBT['PADRON']." P ON P.`id_persona`= T.`id_persona` JOIN ".$DBT['PADRON_PERSONAS']." PP ON PP.`id_persona` = T.`id_persona` AND PP.`afi_nro`IS NOT NULL AND PP.`afi_barra` IS NOT NULL JOIN ".$DBT['PARAMETRICAS_PSICO']." C ON C.`id_categoria` = A.`id_categoria` AND C.`disponible` = '1' WHERE T.`id_turno`='".$sJ['CEI_ID']."'",'QWE_PORTAL');
+	
+	if(QueryNumRows($Que) < 1 ){RJRE('La impresión es para agendas con ticketera disponible.');}
+	while($Row = QueryFetch($Que)){
+		if($Row['estado'] != 1){RJRE('Solo se pueden imprimir turnos pendientes.');}
+		$TURNO['NRO_AFI'] 		= $Row['nro_afi'];
+		$TURNO['DNI'] 			= $Row['dni'];
+		$TURNO['AFILIADO'] 		= $Row['afiliado'];
+		$TURNO['CATEGORIA']		= $Row['categoria'];
+		$TURNO['PROFESIONAL']	= $Row['profesional'];
+		$TURNO['FECHA']		 	= Fecha_Formato($Row['fecha']);
+		$TURNO['HORARIO']	 	= Hora_Formato($Row['horario']);
+	}
+	
+	$HTML_TICKET = create_ticket_directo($TURNO);
+	RJRO($HTML_TICKET);
+}
+elseif($ROUTE_OPC == 'Imprimir_Ticket_Boton'){ // Directo del boton imprimir 
+	$TURNO = [];
+	// $sJ['CEI_ID'] = '';
+	if($PP['A'] != 1){EJE($RETURN);}
+	if(CIJE('CEI_ID') === TRUE){RJRE('No se pudo procesar la solicitud de impresión.');};
+	//agregar el estado = 1 a la query ?¿ y ajustar AND `id_categoria` = (A LOS ID QUE CORRESPONDAN DE PRODUCCION para turnos y ¿sobreturnos[capaz es al pedo] sobreturnos?)
+	$Que = QuerySelect("SELECT T.`estado`, CONCAT(PP.`afi_nro`, '/', PP.`afi_barra`) AS 'nro_afi', P.`dni`, CONCAT(P.`nombre`,' ',P.`apellido`) AS 'afiliado', C.`categoria`, A.`profesional`, T.`fecha`, T.`horario`, T.`estado` FROM ".$DBT['TURNERAS_TURNOS']." T JOIN ".$DBT['TURNERAS_AGENDAS']." A ON T.`id_agenda`=A.`id_agenda` AND A.`id_categoria` IN (1,3) JOIN ".$DBT['PADRON']." P ON P.`id_persona`= T.`id_persona` JOIN ".$DBT['PADRON_PERSONAS']." PP ON PP.`id_persona` = T.`id_persona` AND PP.`afi_nro`IS NOT NULL AND PP.`afi_barra` IS NOT NULL JOIN ".$DBT['PARAMETRICAS_PSICO']." C ON C.`id_categoria` = A.`id_categoria` AND C.`disponible` = '1' WHERE T.`id_turno`='".$sJ['CEI_ID']."'",'QWE_PORTAL');
+	
+	if(QueryNumRows($Que) < 1 ){RJRE('La impresión es para agendas con ticketera disponible.');}
+	while($Row = QueryFetch($Que)){
+		if($Row['estado'] != 1){RJRE('Solo se pueden imprimir turnos pendientes.');}
+		$TURNO['NRO_AFI'] 		= $Row['nro_afi'];
+		$TURNO['DNI'] 			= $Row['dni'];
+		$TURNO['AFILIADO'] 		= $Row['afiliado'];
+		$TURNO['CATEGORIA']		= $Row['categoria'];
+		$TURNO['PROFESIONAL']	= $Row['profesional'];
+		$TURNO['FECHA']		 	= Fecha_Formato($Row['fecha']);
+		$TURNO['HORARIO']	 	= Hora_Formato($Row['horario']);
+	}	
+	$HTML_TICKET = create_ticket($TURNO);
+	RJRO($HTML_TICKET);
+}
+elseif($ROUTE_OPC == 'Imprimir_Ticket_Solo'){ // Dentro del turno dado.
+	$TURNO = [];
+	if($PP['A'] != 1){EJE($RETURN);}
+	if(CIJE('CEI_ID') === TRUE){RJRE('No se pudo procesar la solicitud de impresión.');};
+	//agregar el estado = 1 a la query ?¿
+	$Que = QuerySelect("SELECT CONCAT(PP.`afi_nro`, '/', PP.`afi_barra`) AS 'nro_afi', P.`dni`, CONCAT(P.`nombre`,' ',P.`apellido`) AS 'afiliado', C.`categoria`, A.`profesional`, T.`fecha`, T.`horario`, T.`estado` FROM ".$DBT['TURNERAS_TURNOS']." T JOIN ".$DBT['TURNERAS_AGENDAS']." A ON T.`id_agenda`=A.`id_agenda` AND A.`id_categoria` IN (1,3) JOIN ".$DBT['PADRON']." P ON P.`id_persona`= T.`id_persona` JOIN ".$DBT['PADRON_PERSONAS']." PP ON PP.`id_persona` = T.`id_persona` AND PP.`afi_nro`IS NOT NULL AND PP.`afi_barra` IS NOT NULL JOIN ".$DBT['PARAMETRICAS_PSICO']." C ON C.`id_categoria` = A.`id_categoria` AND C.`disponible` = '1' WHERE T.`id_turno`='".$sJ['CEI_ID']."'",'QWE_PORTAL');
+	// Si no entra es porque no es un turno con id_categoria igual a turneras odontos (modificar id_categoria segun producción)
+	if(QueryNumRows($Que) == 1 ){ 
+		while($Row = QueryFetch($Que)){
+			$TURNO['NRO_AFI'] 		= $Row['nro_afi'];
+			$TURNO['DNI'] 			= $Row['dni'];
+			$TURNO['AFILIADO'] 		= $Row['afiliado'];
+			$TURNO['CATEGORIA']		= $Row['categoria'];
+			$TURNO['PROFESIONAL']	= $Row['profesional'];
+			$TURNO['FECHA']		 	= Fecha_Formato($Row['fecha']);
+			$TURNO['HORARIO']	 	= Hora_Formato($Row['horario']);
+		}	
+		$HTML_TICKET = create_ticket($TURNO);  // COMO VALIDO QUE EL CREATE TICKET NO DEVUELVA UN ERROR Y MOSTRARLO POR PANTALLA?¿
+		RJRO($HTML_TICKET);
+	}
+	RJRE();
+}
+?>
