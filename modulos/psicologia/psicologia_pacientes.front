@@ -1,6 +1,7 @@
 <?php
 $FILE_JS = 'default_v3';
 $TABS['A'] =  array('ICON' => '<i class="fa-regular fa-address-book"></i>', 'TITLE' => 'Pacientes');
+$TABS['B'] =  array('ICON' => '<i class="fa-regular fa-dollar"></i>', 'TITLE' => 'Por cobrar');
 
 $TABLE['A']['COLUMNAS']			= array(
 	array('COLUMNA' => 'Paciente'),
@@ -19,8 +20,27 @@ $TABLE['A']['HERRAMIENTAS_NEW'] = array(
 	// array('TITLE' => 'ANULAR TURNO', 'ICON' => '<i class="fa-solid fa-calendar-xmark fa-lg"></i>', 'FN' => 'Display_A_Anular', 'CLICK' => 'Display_A_Anular()', 'PERMISOS' => 'A', 'ROW_SELECTED' => FALSE),
 	// array('TITLE' => 'BUSCAR', 'ICON' => '<i class="fa-brands fa-searchengin fa-lg"></i>', 'FN' => 'Display_A_QuickSearch', 'CLICK' => 'Display_A_QuickSearch()', 'PERMISOS' => 'C', 'ROW_SELECTED' => FALSE),
 );
-$TABLE['A']['SETTING'] 			= array('ORDENAR' => "TRUE", 'ORDENAR_COL' => 1,'ORDENAR_METHOD' => 'DESC', 'DOBLE_CLICK' => 'Display_Ver_Paciente');
+$TABLE['A']['SETTING'] 			= array('ORDENAR' => "TRUE", 'ORDENAR_COL' => 1,'ORDENAR_METHOD' => 'ASC', 'DOBLE_CLICK' => 'Display_Ver_Paciente');
 $TABLE['A']['QUICK_SEARCH']		= "Buscar Apellido y Nombre o DNI";
+
+
+$TABLE['B']['COLUMNAS']			= array(
+	array('COLUMNA' => 'Paciente'),
+	array('COLUMNA' => 'Turno'),
+	array('COLUMNA' => '$ Sesion', 'DB' => 'VALOR'),
+	array('COLUMNA' => 'Estado')
+);
+
+
+$TABLE['B']['AJAX_URL'] 		= $LINK_BACK.'/Listado_Pagos';
+$TABLE['B']['HERRAMIENTAS_NEW'] = array(
+	array('TITLE' => 'ALTA PACIENTE', 	'ICON' => '<i class="fa-solid fa-user-plus fa-lg"></i>', 	'FN' => 'Display_Paciente', 	'CLICK' => 'Display_Paciente()', 		'PERMISOS' => 'A', 'ROW_SELECTED' => FALSE),
+	array('TITLE' => 'VER TURNOS',		'ICON' => '<i class="fa-solid fa-list fa-lg"></i>', 		'FN' => 'Display_A_Ver', 		'CLICK' => 'Display_A_Ver()',			'PERMISOS' => 'C', 'ROW_SELECTED' => TRUE),
+	array('TITLE' => 'BUSCAR', 			'ICON' => '<i class="fa-brands fa-searchengin fa-lg"></i>', 'FN' => 'Display_A_QuickSearch','CLICK' => 'Display_A_QuickSearch()',	'PERMISOS' => 'C', 'ROW_SELECTED' => FALSE),
+	array('TITLE' => 'ACTUALIZAR',		'ICON' => '<i class="fa-solid fa-rotate fa-lg"></i>',	 	'FN' => NULL, 					'CLICK' => 'TableRefresh(\'B\')', 		'PERMISOS' => 'C', 'ROW_SELECTED' => FALSE),
+);
+$TABLE['B']['SETTING'] 			= array('ORDENAR' => "TRUE", 'ORDENAR_COL' => 1,'ORDENAR_METHOD' => 'DESC', 'DOBLE_CLICK' => 'Display_Ver_Paciente');
+$TABLE['B']['QUICK_SEARCH']		= "Buscar Apellido y Nombre o DNI";
 
 $MAIN = CreateMain($TABS, $TABLE);
 
